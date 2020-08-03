@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30320.27
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB.EntityFramework", "src\MongoDB.EntityFramework\MongoDB.EntityFramework.csproj", "{5E6D9E32-8FC1-4455-B890-A9AC032A6914}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB.EntityFramework.UnitTest", "src\MongoDB.EntityFramework.UnitTest\MongoDB.EntityFramework.UnitTest.csproj", "{CB4360E3-4B58-4DF9-91A2-47A59344FE12}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MongoDB.EntityFramework.Labs", "src\MongoDB.EntityFramework.Labs\MongoDB.EntityFramework.Labs.csproj", "{A871C59F-00F9-48E8-858F-BA66DA28A771}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5E6D9E32-8FC1-4455-B890-A9AC032A6914}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E6D9E32-8FC1-4455-B890-A9AC032A6914}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E6D9E32-8FC1-4455-B890-A9AC032A6914}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E6D9E32-8FC1-4455-B890-A9AC032A6914}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB4360E3-4B58-4DF9-91A2-47A59344FE12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB4360E3-4B58-4DF9-91A2-47A59344FE12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB4360E3-4B58-4DF9-91A2-47A59344FE12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB4360E3-4B58-4DF9-91A2-47A59344FE12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A871C59F-00F9-48E8-858F-BA66DA28A771}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A871C59F-00F9-48E8-858F-BA66DA28A771}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A871C59F-00F9-48E8-858F-BA66DA28A771}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A871C59F-00F9-48E8-858F-BA66DA28A771}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6AC0E63D-BA66-469F-A875-6CFACBCB0393}
+	EndGlobalSection
+EndGlobal
