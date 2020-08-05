@@ -9,7 +9,7 @@ namespace MongoDB.EntityFramework.Core
     //TODO: async methods
     //TODO: colocar cancellationtoken nos methodos async
 
-    public class DbSet<TEntity> : IDbSet<TEntity>, IDocumentQueryable<TEntity>
+    public class DbSet<TEntity> : IDbSet<TEntity>
            where TEntity : class
     {
         private readonly IDbContext context;
@@ -22,9 +22,9 @@ namespace MongoDB.EntityFramework.Core
             this.context = context;
         }
 
-        public async Task<TEntity> FindAsync(object id)
+        public async Task<TEntity> FindAsync<TId>(TId id)
         {
-            return await this.context.FindAsync<TEntity>(id);
+            return await this.context.FindAsync<TEntity, TId>(id);
         }
 
         public async Task<List<TEntity>> ToListAsync()

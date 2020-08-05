@@ -16,7 +16,7 @@ namespace MongoDB.EntityFramework.Core
 
         Task<TEntity> FirstOrDefaultAsync<TEntity>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
 
-        Task<TEntity> FindAsync<TEntity>(object id, CancellationToken cancellationToken = default) where TEntity : class;
+        Task<TEntity> FindAsync<TEntity, TId>(TId id, CancellationToken cancellationToken = default) where TEntity : class;
 
         TEntity Add<TEntity>(TEntity entity) where TEntity : class;
 

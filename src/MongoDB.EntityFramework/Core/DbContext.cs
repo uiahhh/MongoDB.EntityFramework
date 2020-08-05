@@ -123,13 +123,13 @@ namespace MongoDB.EntityFramework.Core
             //fazer o teste com sqlite
             //add, firstordefault pelo id, sem salvar nada na base de dado e checar se retorna algo
 
-            var filterById = false;
+            //var filterById = false;
 
-            if (filterById)
-            {
-                var id = this.GetIdFromFilter(filter);
-                return await this.FindAsync<TEntity>(id, cancellationToken);
-            }
+            //if (filterById)
+            //{
+            //    var id = this.GetIdFromFilter(filter);
+            //    return await this.FindAsync<TEntity>(id, cancellationToken);
+            //}
 
             var entity = this.GetCollection<TEntity>()
                                 .Find(filter)
@@ -153,13 +153,13 @@ namespace MongoDB.EntityFramework.Core
             throw new NotImplementedException();
         }
 
-        public async Task<TEntity> FindAsync<TEntity>(object id, CancellationToken cancellationToken = default)
+        public async Task<TEntity> FindAsync<TEntity, TId>(TId id, CancellationToken cancellationToken = default)
             where TEntity : class
         {
-            return await this.GetEntityFromContext<TEntity>(id, this.FindInDatabase<TEntity>, cancellationToken);
+            return await this.GetEntityFromContext<TEntity, TId>(id, this.FindInDatabase<TEntity, TId>, cancellationToken);
         }
 
-        private async Task<TEntity> FindInDatabase<TEntity>(object id, CancellationToken cancellationToken = default)
+        private async Task<TEntity> FindInDatabase<TEntity, TId>(TId id, CancellationToken cancellationToken = default)
             where TEntity : class
         {
             var idFieldName = this.GetIdFieldName<TEntity>();
@@ -180,15 +180,15 @@ namespace MongoDB.EntityFramework.Core
             };
 
             var entityId = this.GetId(entity);
-            return await GetEntityFromContext<TEntity>(entityId, entityFactory, cancellationToken);
+            return await GetEntityFromContext<TEntity, object>(entityId, entityFactory, cancellationToken);
         }
 
-        private async Task<TEntity> GetEntityFromContext<TEntity>(object entityId, Func<object, CancellationToken, Task<TEntity>> entityFactory, CancellationToken cancellationToken = default)
+        private async Task<TEntity> GetEntityFromContext<TEntity, TId>(TId entityId, Func<TId, CancellationToken, Task<TEntity>> entityFactory, CancellationToken cancellationToken = default)
             where TEntity : class
         {
             var collectionName = this.GetCollectionName<TEntity>();
 
-            Func<object, Task<object>> entityFactoryWithTracking = async (id) =>
+            Func<TId, Task<object>> entityFactoryWithTracking = async (id) =>
             {
                 var entity = await entityFactory(id, cancellationToken);
 
@@ -212,13 +212,18 @@ namespace MongoDB.EntityFramework.Core
             var collectionFromContext = this.GetCollectionFromContext(collectionName);
             var entityFromContext = await GetOrAdd(entityId, collectionFromContext, entityFactoryWithTracking, cancellationToken);
 
+            if (entityFromContext == null)
+            {
+                collectionFromContext.TryRemove(entityId, out var value);
+            }
+
             return entityFromContext as TEntity;
         }
 
         private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
         //https://blog.cdemi.io/async-waiting-inside-c-sharp-locks/
-        private async Task<object> GetOrAdd<TKey, TValue>(TKey key, ConcurrentDictionary<TKey, TValue> dictionay, Func<TKey, Task<TValue>> valueFactory, CancellationToken cancellationToken = default)
+        private async Task<object> GetOrAdd<TKey, TValue>(TKey key, ConcurrentDictionary<object, object> dictionay, Func<TKey, Task<TValue>> valueFactory, CancellationToken cancellationToken = default)
         {
             if (dictionay.TryGetValue(key, out var result))
             {
@@ -245,11 +250,14 @@ namespace MongoDB.EntityFramework.Core
 
         private void SaveAsOriginal(object id, object entity)
         {
-            var collectionName = this.GetCollectionName(entity);
+            if (entity != null)
+            {
+                var collectionName = this.GetCollectionName(entity);
 
-            var originals = this.GetCollectionOriginal(collectionName);
-            var entitySerialized = new Lazy<OriginalValue>(() => new OriginalValue() { ValueSerialized = this.Serialize(entity) });
-            originals.TryAdd(id, entitySerialized);
+                var originals = this.GetCollectionOriginal(collectionName);
+                var entitySerialized = new Lazy<OriginalValue>(() => new OriginalValue() { ValueSerialized = this.Serialize(entity) });
+                originals.TryAdd(id, entitySerialized);
+            }
         }
 
         private object GetId<TEntity>(TEntity entity)

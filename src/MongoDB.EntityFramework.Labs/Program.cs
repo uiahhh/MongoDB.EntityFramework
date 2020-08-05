@@ -69,7 +69,16 @@ namespace MongoDB.EntityFramework.Labs
             var o22 = new Order(id2, "ZehDog2", 129);
             mongoContext.Orders.Add(o22);
             var o222 = await mongoContext.Orders.FindAsync(o22.Id);
+            var o22233 = await mongoContext.Orders.FindAsync(Guid.NewGuid());
+
+            //var id21 = 1;
+            //var o221 = new Item(id21, "ZehDog2", 129);
+            //mongoContext.Items.Add(o221);
+
             await mongoContext.SaveChangesAsync();
+
+            var idd = new ItemId(37);
+            var o2223 = await mongoContext.Items.FindAsync(idd);
 
             var ox2 = await mongoContext.Orders.FirstOrDefaultAsync(x => x.Id == o22.Id);
 
@@ -180,7 +189,7 @@ namespace MongoDB.EntityFramework.Labs
         private static void SetupMongo(IServiceCollection services)
         {
             var connection = "mongodb://localhost:27017";
-            var database = "store2";
+            var database = "store4";
             services.AddSingleton(new Mongo.MongoSettings(connection, database));
             services.AddScoped<Mongo.StoreContext>();
         }
