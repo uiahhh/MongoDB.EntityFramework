@@ -45,22 +45,22 @@ namespace MongoDB.EntityFramework.Labs
 
         private static async Task FirstTest(ServiceProvider serviceProvider)
         {
-            var sqliteContext = serviceProvider.GetService<Sqlite.StoreContext>();
-            sqliteContext.Database.EnsureCreated();
-            var id1 = Guid.NewGuid();
-            var o11 = new Order(id1, "ZehDog1", 150);
-            sqliteContext.Orders.Add(o11);
-            var o111 = sqliteContext.Orders.Find(o11.Id);
-            sqliteContext.SaveChanges();
-            var exp = sqliteContext.Orders.Where(x => x.Id == o11.Id).AsQueryable().ElementType;
-            var o1 = await sqliteContext.Orders.FirstOrDefaultAsync();
+            //var sqliteContext = serviceProvider.GetService<Sqlite.StoreContext>();
+            //sqliteContext.Database.EnsureCreated();
+            //var id1 = Guid.NewGuid();
+            //var o11 = new Order(id1, "ZehDog1", 150);
+            //sqliteContext.Orders.Add(o11);
+            //var o111 = sqliteContext.Orders.Find(o11.Id);
+            //sqliteContext.SaveChanges();
+            //var exp = sqliteContext.Orders.Where(x => x.Id == o11.Id).AsQueryable().ElementType;
+            //var o1 = await sqliteContext.Orders.FirstOrDefaultAsync();
 
-            if (o1 != null)
-            {
-                sqliteContext.Orders.Remove(o1);
-                var o1111 = sqliteContext.Orders.Find(o11.Id);
-                sqliteContext.SaveChanges();
-            }
+            //if (o1 != null)
+            //{
+            //    sqliteContext.Orders.Remove(o1);
+            //    var o1111 = sqliteContext.Orders.Find(o11.Id);
+            //    sqliteContext.SaveChanges();
+            //}
 
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
 
@@ -72,6 +72,10 @@ namespace MongoDB.EntityFramework.Labs
             var o222 = await mongoContext.Orders.FindAsync(o22.Id);
             var o22233 = await mongoContext.Orders.FindAsync(Guid.NewGuid());
 
+            await mongoContext.SaveChangesAsync();
+
+            var allox2 = await mongoContext.Orders.ToListAsync();
+
             //var id21 = 3;
             //var o221 = new Item(id21, "ZehDog2", 129);
             //mongoContext.Items.Add(o221);
@@ -80,8 +84,8 @@ namespace MongoDB.EntityFramework.Labs
 
             //var allo2223 = await mongoContext.Items.ToListAsync();
 
-            var idd = new ItemId(3, "ZehDog2");
-            var o2223 = await mongoContext.Items.FindAsync(idd);
+            //var idd = new ItemId(3, "ZehDog2");
+            //var o2223 = await mongoContext.Items.FindAsync(idd);
 
             var ox2 = await mongoContext.Orders.FirstOrDefaultAsync(x => x.Id == o22.Id);
 
@@ -192,7 +196,7 @@ namespace MongoDB.EntityFramework.Labs
         private static void SetupMongo(IServiceCollection services)
         {
             var connectionString = "mongodb://localhost:27017";
-            var databaseName = "store95";
+            var databaseName = "store103";
             services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
             services.AddScoped<Mongo.StoreContext>();
 

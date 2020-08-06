@@ -6,7 +6,9 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
+using MongoDB.EntityFramework.Conventions;
 using MongoDB.EntityFramework.Serializers;
 
 namespace MongoDB.EntityFramework.Core
@@ -14,6 +16,8 @@ namespace MongoDB.EntityFramework.Core
     public class DbContext : IDbContext
     {
         private readonly IMongoDatabase database;
+
+        private readonly IDbContextOptions options;
 
         //id,entity
         private ConcurrentDictionary<string, ConcurrentDictionary<object, object>> collectionsFromContext;
@@ -28,22 +32,32 @@ namespace MongoDB.EntityFramework.Core
 
         private static readonly object locker = new object();
 
-        public DbContext(IMongoClient client, string databaseName)
+        public DbContext(IMongoClient client, string databaseName, IDbContextOptions options = null)
         {
             this.database = client.GetDatabase(databaseName);
+            this.options = options;
             this.InitCollectionsContext();
-            this.InitGlobalConfigurations();
+            this.InitOptions();
         }
 
-        private void InitGlobalConfigurations()
+        private void InitOptions()
         {
-            if (!globalConfigurationsInitialized)
+            if (this.options != null && this.options.AnyOptionEnabled && !globalConfigurationsInitialized)
             {
                 lock (locker)
                 {
                     if (!globalConfigurationsInitialized)
                     {
-                        BsonSerializer.RegisterSerializationProvider(new SerializationProvider());
+                        if (this.options.EnableStructSerializer)
+                        {
+                            BsonSerializer.RegisterSerializationProvider(new SerializationProvider());
+                        }
+
+                        if (this.options.EnableMappingReadOnlyProperties)
+                        {
+                            ConventionRegistry.Register(nameof(MappingReadOnlyPropertiesConvention), new ConventionPack { new MappingReadOnlyPropertiesConvention() }, _ => true);
+                        }
+
                         globalConfigurationsInitialized = true;
                     }
                 }

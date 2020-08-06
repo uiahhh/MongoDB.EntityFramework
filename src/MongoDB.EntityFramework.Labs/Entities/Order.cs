@@ -15,7 +15,7 @@ namespace MongoDB.EntityFramework.Samples.Entities
 
         public string StoreName { get; set; }
 
-        public decimal TotalValue { get; set; }
+        public decimal? TotalValue { get; set; }
     }
 
     public struct ItemId
@@ -47,17 +47,17 @@ namespace MongoDB.EntityFramework.Samples.Entities
         public ItemCode(string code)
         {
             Id = Guid.NewGuid();
-            Code = code;
+            Code = new ItemId(199, code);
         }
 
         public Guid Id { get; }
-        public string Code { get; }
+        public ItemId Code { get; }
 
         public override bool Equals(object obj)
         {
             return obj is ItemCode id &&
                    Id == id.Id &&
-                   Code == id.Code;
+                   Code.Equals(id.Code);
         }
 
         public override int GetHashCode()
@@ -75,6 +75,7 @@ namespace MongoDB.EntityFramework.Samples.Entities
             IdOriginal = new ItemId(id + 111, storeName + storeName);
             StoreName = storeName;
             TotalValue = totalValue;
+            MyProperty = 10;
         }
 
         public ItemId Id { get; set; }
@@ -82,6 +83,8 @@ namespace MongoDB.EntityFramework.Samples.Entities
         public ItemId IdOriginal { get; set; }
 
         public ItemCode Code { get; set; }
+
+        public decimal? MyProperty { get; set; }
 
         public string StoreName { get; private set; }
         public decimal TotalValue { get; set; }
