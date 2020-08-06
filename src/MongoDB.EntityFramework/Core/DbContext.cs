@@ -5,19 +5,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using MongoDB.EntityFramework.Serializers;
 
 namespace MongoDB.EntityFramework.Core
 {
-    //TODO: create sepparated file
-    //TODO: logs
-    public enum EntityState
-    {
-        Added,
-        Updated,
-        Removed,
-    }
-
     public class DbContext : IDbContext
     {
         private readonly IMongoDatabase database;
@@ -31,23 +24,33 @@ namespace MongoDB.EntityFramework.Core
         //id,state
         private ConcurrentDictionary<string, ConcurrentDictionary<object, EntityState>> collectionsState;
 
-        public DbContext(string connectionString, string databaseName)
-        {
-            //TODO: database deve ser Lazy
-            var client = new MongoClient(connectionString);
-            var database = client.GetDatabase(databaseName);
+        private static bool globalConfigurationsInitialized = false;
 
-            this.database = database;
-            this.CleanDictionaries();
+        private static readonly object locker = new object();
+
+        public DbContext(IMongoClient client, string databaseName)
+        {
+            this.database = client.GetDatabase(databaseName);
+            this.InitCollectionsContext();
+            this.InitGlobalConfigurations();
         }
 
-        public DbContext(IMongoDatabase database)
+        private void InitGlobalConfigurations()
         {
-            this.database = database;
-            this.CleanDictionaries();
+            if (!globalConfigurationsInitialized)
+            {
+                lock (locker)
+                {
+                    if (!globalConfigurationsInitialized)
+                    {
+                        BsonSerializer.RegisterSerializationProvider(new SerializationProvider());
+                        globalConfigurationsInitialized = true;
+                    }
+                }
+            }
         }
 
-        private void CleanDictionaries()
+        private void InitCollectionsContext()
         {
             this.collectionsFromContext = new ConcurrentDictionary<string, ConcurrentDictionary<object, object>>();
             this.collectionsOriginal = new ConcurrentDictionary<string, ConcurrentDictionary<object, Lazy<OriginalValue>>>();

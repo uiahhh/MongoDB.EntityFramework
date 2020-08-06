@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Debug;
+using MongoDB.Driver;
 using MongoDB.EntityFramework.Samples.Entities;
 using Mongo = MongoDB.EntityFramework.Samples.Data.Mongo;
 using Sqlite = MongoDB.EntityFramework.Samples.Data.Sqlite;
@@ -71,13 +72,15 @@ namespace MongoDB.EntityFramework.Labs
             var o222 = await mongoContext.Orders.FindAsync(o22.Id);
             var o22233 = await mongoContext.Orders.FindAsync(Guid.NewGuid());
 
-            //var id21 = 1;
+            //var id21 = 3;
             //var o221 = new Item(id21, "ZehDog2", 129);
             //mongoContext.Items.Add(o221);
 
-            await mongoContext.SaveChangesAsync();
+            //await mongoContext.SaveChangesAsync();
 
-            var idd = new ItemId(37);
+            //var allo2223 = await mongoContext.Items.ToListAsync();
+
+            var idd = new ItemId(3, "ZehDog2");
             var o2223 = await mongoContext.Items.FindAsync(idd);
 
             var ox2 = await mongoContext.Orders.FirstOrDefaultAsync(x => x.Id == o22.Id);
@@ -188,10 +191,12 @@ namespace MongoDB.EntityFramework.Labs
 
         private static void SetupMongo(IServiceCollection services)
         {
-            var connection = "mongodb://localhost:27017";
-            var database = "store4";
-            services.AddSingleton(new Mongo.MongoSettings(connection, database));
+            var connectionString = "mongodb://localhost:27017";
+            var databaseName = "store95";
+            services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
             services.AddScoped<Mongo.StoreContext>();
+
+            services.AddScoped<IMongoClient>(provider => new MongoClient(connectionString));
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using MongoDB.EntityFramework.Core;
+﻿using MongoDB.Driver;
+using MongoDB.EntityFramework.Core;
 using MongoDB.EntityFramework.Samples.Entities;
 
 namespace MongoDB.EntityFramework.Samples.Data.Mongo
@@ -18,7 +19,8 @@ namespace MongoDB.EntityFramework.Samples.Data.Mongo
 
     public class StoreContext : DbContext
     {
-        public StoreContext(MongoSettings settings) : base(settings.ConnectionString, settings.DatabaseName)
+        public StoreContext(IMongoClient client, MongoSettings settings)
+            : base(client, settings.DatabaseName)
         {
             //TODO: lazy
             Orders = new DbSet<Order>(this);
