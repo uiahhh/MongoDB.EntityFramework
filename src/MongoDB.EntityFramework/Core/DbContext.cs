@@ -19,11 +19,13 @@ namespace MongoDB.EntityFramework.Core
 
         private readonly IDbContextOptions options;
 
+        private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+
         //id,entity
         private ConcurrentDictionary<string, ConcurrentDictionary<object, object>> collectionsFromContext;
 
         //id,entity serialized
-        private ConcurrentDictionary<string, ConcurrentDictionary<object, Lazy<OriginalValue>>> collectionsOriginal;
+        private ConcurrentDictionary<string, ConcurrentDictionary<object, OriginalValue>> collectionsOriginal;
 
         //id,state
         private ConcurrentDictionary<string, ConcurrentDictionary<object, EntityState>> collectionsState;
@@ -67,7 +69,7 @@ namespace MongoDB.EntityFramework.Core
         private void InitCollectionsContext()
         {
             this.collectionsFromContext = new ConcurrentDictionary<string, ConcurrentDictionary<object, object>>();
-            this.collectionsOriginal = new ConcurrentDictionary<string, ConcurrentDictionary<object, Lazy<OriginalValue>>>();
+            this.collectionsOriginal = new ConcurrentDictionary<string, ConcurrentDictionary<object, OriginalValue>>();
             this.collectionsState = new ConcurrentDictionary<string, ConcurrentDictionary<object, EntityState>>();
         }
 
@@ -237,8 +239,6 @@ namespace MongoDB.EntityFramework.Core
             return entityFromContext as TEntity;
         }
 
-        private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-
         //https://blog.cdemi.io/async-waiting-inside-c-sharp-locks/
         private async Task<object> GetOrAdd<TKey, TValue>(TKey key, ConcurrentDictionary<object, object> dictionay, Func<TKey, Task<TValue>> valueFactory, CancellationToken cancellationToken = default)
         {
@@ -272,7 +272,7 @@ namespace MongoDB.EntityFramework.Core
                 var collectionName = this.GetCollectionName(entity);
 
                 var originals = this.GetCollectionOriginal(collectionName);
-                var entitySerialized = new Lazy<OriginalValue>(() => new OriginalValue() { ValueSerialized = this.Serialize(entity) });
+                var entitySerialized = new OriginalValue() { ValueSerialized = this.Serialize(entity) };
                 originals.TryAdd(id, entitySerialized);
             }
         }
@@ -362,7 +362,7 @@ namespace MongoDB.EntityFramework.Core
             return this.GetDictionaryByCollectionName(collectionName, this.collectionsFromContext);
         }
 
-        private ConcurrentDictionary<object, Lazy<OriginalValue>> GetCollectionOriginal(string collectionName)
+        private ConcurrentDictionary<object, OriginalValue> GetCollectionOriginal(string collectionName)
         {
             return this.GetDictionaryByCollectionName(collectionName, this.collectionsOriginal);
         }
@@ -401,7 +401,7 @@ namespace MongoDB.EntityFramework.Core
 
                 if (entitiesToSave.Any())
                 {
-                    var entitiesOriginal = new Lazy<ConcurrentDictionary<object, Lazy<OriginalValue>>>(() => this.GetCollectionOriginal(collectionName));
+                    var entitiesOriginal = new Lazy<ConcurrentDictionary<object, OriginalValue>>(() => this.GetCollectionOriginal(collectionName));
                     var collectionDB = this.database.GetCollection<object>(collectionName);
 
                     foreach (var entity in entitiesToSave)
@@ -494,13 +494,13 @@ namespace MongoDB.EntityFramework.Core
             return entitiesIdSavedByCollection;
         }
 
-        private bool ShouldBeSave(object id, object data, ConcurrentDictionary<object, Lazy<OriginalValue>> originals)
+        private bool ShouldBeSave(object id, object data, ConcurrentDictionary<object, OriginalValue> originals)
         {
             var shouldBeSave = true;
             var dataSerialized = Serialize(data);
 
-            var newOriginalValue = new Lazy<OriginalValue>(() => new OriginalValue() { NewValueSerialized = dataSerialized });
-            var originalValue = originals.GetOrAdd(id, newOriginalValue).Value;
+            var newOriginalValue = new OriginalValue() { NewValueSerialized = dataSerialized };
+            var originalValue = originals.GetOrAdd(id, newOriginalValue);
             var hasOriginalValue = !string.IsNullOrWhiteSpace(originalValue.ValueSerialized);
 
             if (hasOriginalValue)
