@@ -1,15 +1,40 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageId>MongoDB.EntityFramework</PackageId>
-    <Version>0.0.2</Version>
+    <Version>0.0.5</Version>
     <Authors>Ricardo Carvalho</Authors>
     <Company>ricardoac.com</Company>
+    <Summary>Use MongoDB Driver as the Entity Framework.</Summary>
+    <Description>Use MongoDB Driver as the Entity Framework.</Description>
+
+    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+    <AssemblyName>MongoDB.EntityFramework</AssemblyName>
+    <PackageId>MongoDB.EntityFramework</PackageId>
+
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/uiahhh/MongoDB.EntityFramework</PackageProjectUrl>
+
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icon.png" Pack="true" PackagePath="" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="2.11.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
 </Project>

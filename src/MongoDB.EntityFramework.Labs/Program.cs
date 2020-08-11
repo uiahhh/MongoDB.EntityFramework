@@ -66,11 +66,13 @@ namespace MongoDB.EntityFramework.Labs
 
             var all = await mongoContext.Orders.ToListAsync();
 
-            var id2 = Guid.NewGuid();
-            var o22 = new Order(id2, "ZehDog2", 129);
-            mongoContext.Orders.Add(o22);
-            var o222 = await mongoContext.Orders.FindAsync(o22.Id);
+            var id2 = Guid.Parse("bdcbfe0d-b74b-473c-a069-c06f2c444960"); //Guid.NewGuid();
+            //var o22 = new Order(id2, "ZehDog2", 129);
+            //mongoContext.Orders.Add(o22);
+            var o222 = await mongoContext.Orders.FindAsync(id2);
             var o22233 = await mongoContext.Orders.FindAsync(Guid.NewGuid());
+
+            o222.StoreName = "sdfg";
 
             await mongoContext.SaveChangesAsync();
 
@@ -87,15 +89,15 @@ namespace MongoDB.EntityFramework.Labs
             //var idd = new ItemId(3, "ZehDog2");
             //var o2223 = await mongoContext.Items.FindAsync(idd);
 
-            var ox2 = await mongoContext.Orders.FirstOrDefaultAsync(x => x.Id == o22.Id);
+            //var ox2 = await mongoContext.Orders.FirstOrDefaultAsync(x => x.Id == o22.Id);
 
-            var o2 = await mongoContext.Orders.FirstOrDefaultAsync();
-            if (o2 != null)
-            {
-                mongoContext.Orders.Remove(o2);
-                var o2222 = await mongoContext.Orders.FindAsync(o22.Id);
-                await mongoContext.SaveChangesAsync();
-            }
+            //var o2 = await mongoContext.Orders.FirstOrDefaultAsync();
+            //if (o2 != null)
+            //{
+            //    mongoContext.Orders.Remove(o2);
+            //    var o2222 = await mongoContext.Orders.FindAsync(o22.Id);
+            //    await mongoContext.SaveChangesAsync();
+            //}
         }
 
         private static async Task SecondTest(ServiceProvider serviceProvider)
@@ -196,7 +198,7 @@ namespace MongoDB.EntityFramework.Labs
         private static void SetupMongo(IServiceCollection services)
         {
             var connectionString = "mongodb://localhost:27017";
-            var databaseName = "store103";
+            var databaseName = "store104";
             services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
             services.AddScoped<Mongo.StoreContext>();
 

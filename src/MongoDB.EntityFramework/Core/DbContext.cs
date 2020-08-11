@@ -397,7 +397,7 @@ namespace MongoDB.EntityFramework.Core
                 var collectionName = collection.Key;
                 entitiesIdSavedByCollection.TryGetValue(collectionName, out var entitiesIdSaved);
 
-                var entitiesToSave = collection.Value.Where(x => !entitiesIdSaved.Contains(x.Key));
+                var entitiesToSave = collection.Value.Where(x => entitiesIdSaved == null || !entitiesIdSaved.Contains(x.Key));
 
                 if (entitiesToSave.Any())
                 {
