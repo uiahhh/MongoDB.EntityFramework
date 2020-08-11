@@ -64,19 +64,29 @@ namespace MongoDB.EntityFramework.Labs
 
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
 
-            var all = await mongoContext.Orders.ToListAsync();
+            var id = new BoxId("123");
 
-            var id2 = Guid.Parse("bdcbfe0d-b74b-473c-a069-c06f2c444960"); //Guid.NewGuid();
-            //var o22 = new Order(id2, "ZehDog2", 129);
-            //mongoContext.Orders.Add(o22);
-            var o222 = await mongoContext.Orders.FindAsync(id2);
-            var o22233 = await mongoContext.Orders.FindAsync(Guid.NewGuid());
+            //var box = new Box(id, 10);
+            //mongoContext.Boxes.Add(box);
 
-            o222.StoreName = "sdfg";
+            var box = await mongoContext.Boxes.FindAsync(id);
+            box.Measures = 456;
 
             await mongoContext.SaveChangesAsync();
 
-            var allox2 = await mongoContext.Orders.ToListAsync();
+            //// var all = await mongoContext.Orders.ToListAsync();
+
+            //var id2 = Guid.Parse("bdcbfe0d-b74b-473c-a069-c06f2c444960"); //Guid.NewGuid();
+            ////var o22 = new Order(id2, "ZehDog2", 129);
+            ////mongoContext.Orders.Add(o22);
+            //var o222 = await mongoContext.Orders.FindAsync(id2);
+            ////var o22233 = await mongoContext.Orders.FindAsync(Guid.NewGuid());
+
+            //o222.StoreName = "sdfg";
+
+            //await mongoContext.SaveChangesAsync();
+
+            //var allox2 = await mongoContext.Orders.ToListAsync();
 
             //var id21 = 3;
             //var o221 = new Item(id21, "ZehDog2", 129);

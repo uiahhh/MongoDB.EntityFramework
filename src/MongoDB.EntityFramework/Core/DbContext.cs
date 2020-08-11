@@ -92,12 +92,6 @@ namespace MongoDB.EntityFramework.Core
             return typeof(TEntity).Name;
         }
 
-        protected string GetCollectionName(object entity)
-        {
-            // TODO: necessidade de ter algo configuravel, como no fluent do EF
-            return entity.GetType().Name;
-        }
-
         protected IMongoCollection<TEntity> GetCollection<TEntity>()
             where TEntity : class
         {
@@ -265,14 +259,21 @@ namespace MongoDB.EntityFramework.Core
             }
         }
 
-        private void SaveAsOriginal(object id, object entity)
+        private void SaveAsOriginal<TEntity, TId>(TId id, TEntity entity)
+            where TEntity : class
         {
             if (entity != null)
             {
-                var collectionName = this.GetCollectionName(entity);
+                var collectionName = this.GetCollectionName<TEntity>();
+                var idFieldName = this.GetIdFieldName(collectionName);
 
                 var originals = this.GetCollectionOriginal(collectionName);
-                var entitySerialized = new OriginalValue() { ValueSerialized = this.Serialize(entity) };
+                var entitySerialized = new OriginalValue()
+                {
+                    ValueSerialized = this.Serialize(entity),
+                    FilterByIdTyped = Builders<object>.Filter.Eq(idFieldName, id)
+                };
+
                 originals.TryAdd(id, entitySerialized);
             }
         }
@@ -409,12 +410,12 @@ namespace MongoDB.EntityFramework.Core
                         var id = entity.Key;
                         var data = entity.Value;
 
-                        var shouldBeSave = this.ShouldBeSave(id, data, entitiesOriginal.Value);
+                        var shouldBeSave = this.ShouldBeSave(id, data, entitiesOriginal.Value, out var originalValue);
 
                         if (shouldBeSave)
                         {
                             var idFieldName = this.GetIdFieldName(collectionName);
-                            var filter = Builders<object>.Filter.Eq(idFieldName, id);
+                            var filter = originalValue.FilterByIdTyped;
                             // TODO: pensar em ter o timestamp para concorrencia
                             // TODO: pensar em ter created e updated para audit
                             // TODO: pensar em ter createdby e updatedby para audit, necessario implementar IMongoAuditAuth
@@ -494,14 +495,12 @@ namespace MongoDB.EntityFramework.Core
             return entitiesIdSavedByCollection;
         }
 
-        private bool ShouldBeSave(object id, object data, ConcurrentDictionary<object, OriginalValue> originals)
+        private bool ShouldBeSave(object id, object data, ConcurrentDictionary<object, OriginalValue> originals, out OriginalValue originalValue)
         {
-            var shouldBeSave = true;
+            var shouldBeSave = false;
             var dataSerialized = Serialize(data);
 
-            var newOriginalValue = new OriginalValue() { NewValueSerialized = dataSerialized };
-            var originalValue = originals.GetOrAdd(id, newOriginalValue);
-            var hasOriginalValue = !string.IsNullOrWhiteSpace(originalValue.ValueSerialized);
+            var hasOriginalValue = originals.TryGetValue(id, out originalValue);
 
             if (hasOriginalValue)
             {
@@ -518,8 +517,14 @@ namespace MongoDB.EntityFramework.Core
 
     public class OriginalValue
     {
+        public OriginalValue()
+        {
+        }
+
         public string ValueSerialized { get; set; }
 
         public string NewValueSerialized { get; set; }
+
+        public FilterDefinition<object> FilterByIdTyped { get; set; }
     }
 }

@@ -2,6 +2,29 @@
 
 namespace MongoDB.EntityFramework.Samples.Entities
 {
+    public class Box
+    {
+        public Box(BoxId id, int measures)
+        {
+            Id = id;
+            Measures = measures;
+        }
+
+        public BoxId Id { get; set; }
+
+        public int Measures { get; set; }
+    }
+
+    public class BoxId
+    {
+        public BoxId(string value)
+        {
+            Value = value;
+        }
+
+        public string Value { get; set; }
+    }
+
     public class Order
     {
         public Order(Guid id, string storeName, decimal totalValue)

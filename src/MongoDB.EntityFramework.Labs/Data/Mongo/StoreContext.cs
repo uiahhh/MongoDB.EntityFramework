@@ -25,11 +25,14 @@ namespace MongoDB.EntityFramework.Samples.Data.Mongo
             //TODO: lazy
             Orders = new DbSet<Order>(this);
             Items = new DbSet<Item>(this);
+            Boxes = new DbSet<Box>(this);
         }
 
         public DbSet<Order> Orders { get; set; }
 
         public DbSet<Item> Items { get; set; }
+
+        public DbSet<Box> Boxes { get; set; }
 
         //protected override void OnModelCreating(ModelBuilder builder)
         //{
