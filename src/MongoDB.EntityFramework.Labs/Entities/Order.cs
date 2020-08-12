@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace MongoDB.EntityFramework.Samples.Entities
 {
@@ -13,6 +14,19 @@ namespace MongoDB.EntityFramework.Samples.Entities
         public BoxId Id { get; set; }
 
         public int Measures { get; set; }
+
+        public List<int> Numbers { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Box box &&
+                   EqualityComparer<BoxId>.Default.Equals(Id, box.Id);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Id);
+        }
     }
 
     public class BoxId
@@ -23,6 +37,17 @@ namespace MongoDB.EntityFramework.Samples.Entities
         }
 
         public string Value { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            return obj is BoxId id &&
+                   Value == id.Value;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Value);
+        }
     }
 
     public class Order

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,17 +63,45 @@ namespace MongoDB.EntityFramework.Labs
             //    sqliteContext.SaveChanges();
             //}
 
+            var mongoClient = serviceProvider.GetService<IMongoClient>();
+            var idM = new BoxId("123");
+            var boxM = new Box(idM, 10);
+            var filterM = Builders<object>.Filter.Eq("_id", idM);
+            Expression<Func<Box, bool>> filterM2 = x => x.Id == idM;
+
+            var collection = mongoClient.GetDatabase("store104").GetCollection<object>(typeof(Box).Name);
+            var collection2 = mongoClient.GetDatabase("store104").GetCollection<Box>(typeof(Box).Name);
+
+            var result1 = await collection2.FindAsync(filterM2);
+            var entity1 = result1.FirstOrDefault();
+            entity1.Measures = 10542;
+
+            var id1 = typeof(Box).GetProperty("Id").GetValue(entity1, null) as BoxId;
+            var filterM1 = Builders<object>.Filter.Eq("_id", id1);
+
+            var result = await collection.ReplaceOneAsync(
+                                filterM1,
+                                entity1,
+                                new ReplaceOptions { IsUpsert = false });
+
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
 
+            //var id1 = new BoxId("456");
+            //var box1 = new Box(id1, 10);
+            //box1.Numbers = new List<int>() { 1, 2, 3 };
+            //mongoContext.Boxes.Add(box1);
+
             var id = new BoxId("123");
-
-            //var box = new Box(id, 10);
-            //mongoContext.Boxes.Add(box);
-
-            var box = await mongoContext.Boxes.FindAsync(id);
-            box.Measures = 456;
+            //Expression<Func<Box, bool>> filter = x => x.Measures == 456;
+            Expression<Func<Box, bool>> filter = x => x.Id == id;
+            var box = await mongoContext.Boxes.FirstOrDefaultAsync(filter);
+            //var box = await mongoContext.Boxes.FindAsync(id);
+            box.Measures = 777;
+            //box.Numbers = new List<int>() { 1, 2, 3 };
 
             await mongoContext.SaveChangesAsync();
+
+            var x = 1;
 
             //// var all = await mongoContext.Orders.ToListAsync();
 

@@ -29,7 +29,11 @@ namespace MongoDB.EntityFramework.Core
 
         public async Task<List<TEntity>> ToListAsync()
         {
-            return await this.context.ToListAsync(this.predicate);
+            var result = await this.context.ToListAsync(this.predicate);
+
+            this.predicate = noFilter;
+
+            return result;
         }
 
         public async Task<List<TEntity>> ToListAsync(Expression<Func<TEntity, bool>> predicate)
@@ -39,7 +43,12 @@ namespace MongoDB.EntityFramework.Core
 
         public async Task<TEntity> FirstOrDefaultAsync()
         {
-            return await this.context.FirstOrDefaultAsync(this.predicate);
+            //TODO: executar teste em paralelo e ver se o predicate influencia em outra query
+            var result = await this.context.FirstOrDefaultAsync(this.predicate);
+
+            this.predicate = noFilter;
+
+            return result;
         }
 
         public async Task<TEntity> FirstOrDefaultAsync(Expression<Func<TEntity, bool>> predicate)
@@ -49,7 +58,15 @@ namespace MongoDB.EntityFramework.Core
 
         public IDocumentQueryable<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         {
-            this.predicate = this.predicate.AndAlso(predicate);
+            if (this.predicate == noFilter)
+            {
+                this.predicate = predicate;
+            }
+            else
+            {
+                this.predicate = this.predicate.AndAlso(predicate);
+            }
+
             return this;
         }
 

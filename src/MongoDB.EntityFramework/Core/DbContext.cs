@@ -144,9 +144,8 @@ namespace MongoDB.EntityFramework.Core
             //    return await this.FindAsync<TEntity>(id, cancellationToken);
             //}
 
-            var entity = this.GetCollection<TEntity>()
-                                .Find(filter)
-                                .FirstOrDefault();
+            var result = await this.GetCollection<TEntity>().FindAsync(filter, cancellationToken: cancellationToken);
+            var entity = result.FirstOrDefault();
 
             // TODO: implementar o AsNoTracking
             //Tracking(id, entity);
@@ -193,7 +192,7 @@ namespace MongoDB.EntityFramework.Core
             };
 
             var entityId = this.GetId(entity);
-            return await GetEntityFromContext<TEntity, object>(entityId, entityFactory, cancellationToken);
+            return await GetEntityFromContext(entityId, entityFactory, cancellationToken);
         }
 
         private async Task<TEntity> GetEntityFromContext<TEntity, TId>(TId entityId, Func<TId, CancellationToken, Task<TEntity>> entityFactory, CancellationToken cancellationToken = default)
@@ -389,6 +388,7 @@ namespace MongoDB.EntityFramework.Core
             await UpdateChanges(entitiesIdSavedByCollection, cancellationToken);
         }
 
+        //TODO: diminuir complexidade ciclomatica
         private async Task UpdateChanges(Dictionary<string, List<object>> entitiesIdSavedByCollection, CancellationToken cancellationToken = default)
         {
             foreach (var collection in this.collectionsFromContext)
@@ -402,29 +402,38 @@ namespace MongoDB.EntityFramework.Core
 
                 if (entitiesToSave.Any())
                 {
-                    var entitiesOriginal = new Lazy<ConcurrentDictionary<object, OriginalValue>>(() => this.GetCollectionOriginal(collectionName));
-                    var collectionDB = this.database.GetCollection<object>(collectionName);
+                    var originalValues = this.GetCollectionOriginal(collectionName);
 
-                    foreach (var entity in entitiesToSave)
+                    if (originalValues.Any())
                     {
-                        var id = entity.Key;
-                        var data = entity.Value;
+                        var collectionDB = this.database.GetCollection<object>(collectionName);
 
-                        var shouldBeSave = this.ShouldBeSave(id, data, entitiesOriginal.Value, out var originalValue);
-
-                        if (shouldBeSave)
+                        foreach (var entity in entitiesToSave)
                         {
-                            var idFieldName = this.GetIdFieldName(collectionName);
-                            var filter = originalValue.FilterByIdTyped;
-                            // TODO: pensar em ter o timestamp para concorrencia
-                            // TODO: pensar em ter created e updated para audit
-                            // TODO: pensar em ter createdby e updatedby para audit, necessario implementar IMongoAuditAuth
+                            var id = entity.Key;
+                            var data = entity.Value;
 
-                            await collectionDB.ReplaceOneAsync(
-                                        filter,
-                                        data,
-                                        new ReplaceOptions { IsUpsert = false },
-                                        cancellationToken: cancellationToken);
+                            var hasOriginalValue = originalValues.TryGetValue(id, out var originalValue);
+
+                            if (hasOriginalValue)
+                            {
+                                var shouldBeSave = this.ShouldBeSave(id, data, originalValue);
+
+                                if (shouldBeSave)
+                                {
+                                    var idFieldName = this.GetIdFieldName(collectionName);
+                                    var filter = originalValue.FilterByIdTyped;
+                                    // TODO: pensar em ter o timestamp para concorrencia
+                                    // TODO: pensar em ter created e updated para audit
+                                    // TODO: pensar em ter createdby e updatedby para audit, necessario implementar IMongoAuditAuth
+
+                                    var result = await collectionDB.ReplaceOneAsync(
+                                                filter,
+                                                data,
+                                                new ReplaceOptions { IsUpsert = false },
+                                                cancellationToken: cancellationToken);
+                                }
+                            }
                         }
                     }
                 }
@@ -495,21 +504,15 @@ namespace MongoDB.EntityFramework.Core
             return entitiesIdSavedByCollection;
         }
 
-        private bool ShouldBeSave(object id, object data, ConcurrentDictionary<object, OriginalValue> originals, out OriginalValue originalValue)
+        private bool ShouldBeSave(object id, object data, OriginalValue originalValue)
         {
-            var shouldBeSave = false;
             var dataSerialized = Serialize(data);
+            var originalValueSerialized = originalValue.ValueSerialized;
 
-            var hasOriginalValue = originals.TryGetValue(id, out originalValue);
+            // TODO: remover newtonsoft
+            var shouldBeSave = !Newtonsoft.Json.Linq.JToken.DeepEquals(originalValueSerialized, dataSerialized);
 
-            if (hasOriginalValue)
-            {
-                var originalValueSerialized = originalValue.ValueSerialized;
-                // TODO: remover newtonsoft
-                shouldBeSave = !Newtonsoft.Json.Linq.JToken.DeepEquals(originalValueSerialized, dataSerialized);
-
-                originalValue.NewValueSerialized = dataSerialized;
-            }
+            originalValue.NewValueSerialized = dataSerialized;
 
             return shouldBeSave;
         }
