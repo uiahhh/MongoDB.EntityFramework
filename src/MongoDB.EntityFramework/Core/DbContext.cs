@@ -100,20 +100,20 @@ namespace MongoDB.EntityFramework.Core
             return this.database.GetCollection<TEntity>(collectionName);
         }
 
-        public IDbSet<TEntity> Set<TEntity>()
+        public IDbSet<TEntity, TId> Set<TEntity, TId>()
             where TEntity : class
         {
             //TODO: fazer cache com um dicionario Type,Object
-            return new DbSet<TEntity>(this);
+            return new DbSet<TEntity, TId>(this);
         }
 
-        public async Task<List<TEntity>> AllAsync<TEntity>(CancellationToken cancellationToken = default)
+        public async Task<List<TEntity>> AllAsync<TEntity, TId>(CancellationToken cancellationToken = default)
                     where TEntity : class
         {
-            return await this.ToListAsync<TEntity>(null, cancellationToken);
+            return await this.ToListAsync<TEntity, TId>(null, cancellationToken);
         }
 
-        public async Task<List<TEntity>> ToListAsync<TEntity>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
+        public async Task<List<TEntity>> ToListAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
             where TEntity : class
         {
             var result = await this.GetCollection<TEntity>().FindAsync(filter, cancellationToken: cancellationToken);
@@ -123,12 +123,12 @@ namespace MongoDB.EntityFramework.Core
             //Tracking(id, entity);
 
             var entitiesFromContext = entities
-                .Select(entity => this.GetEntityFromContext(entity, cancellationToken));
+                .Select(entity => this.GetEntityFromContext<TEntity, TId>(entity, cancellationToken));
 
             return (await Task.WhenAll(entitiesFromContext)).ToList();
         }
 
-        public async Task<TEntity> FirstOrDefaultAsync<TEntity>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
+        public async Task<TEntity> FirstOrDefaultAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
             where TEntity : class
         {
             //TODO: se filtro for pelo id
@@ -155,7 +155,7 @@ namespace MongoDB.EntityFramework.Core
                 return default;
             }
 
-            return await this.GetEntityFromContext(entity, cancellationToken);
+            return await this.GetEntityFromContext<TEntity, TId>(entity, cancellationToken);
         }
 
         private object GetIdFromFilter<TEntity>(Expression<Func<TEntity, bool>> filter)
@@ -183,16 +183,16 @@ namespace MongoDB.EntityFramework.Core
             return entity;
         }
 
-        private async Task<TEntity> GetEntityFromContext<TEntity>(TEntity entity, CancellationToken cancellationToken = default)
+        private async Task<TEntity> GetEntityFromContext<TEntity, TId>(TEntity entity, CancellationToken cancellationToken = default)
             where TEntity : class
         {
-            Func<object, CancellationToken, Task<TEntity>> entityFactory = async (id, _) =>
+            Func<TId, CancellationToken, Task<TEntity>> entityFactory = async (id, _) =>
             {
                 return await Task.FromResult(entity);
             };
 
-            var entityId = this.GetId(entity);
-            return await GetEntityFromContext(entityId, entityFactory, cancellationToken);
+            var entityId = this.GetId<TEntity, TId>(entity);
+            return await GetEntityFromContext<TEntity, TId>(entityId, entityFactory, cancellationToken);
         }
 
         private async Task<TEntity> GetEntityFromContext<TEntity, TId>(TId entityId, Func<TId, CancellationToken, Task<TEntity>> entityFactory, CancellationToken cancellationToken = default)
@@ -270,26 +270,26 @@ namespace MongoDB.EntityFramework.Core
                 var entitySerialized = new OriginalValue()
                 {
                     ValueSerialized = this.Serialize(entity),
-                    FilterByIdTyped = Builders<object>.Filter.Eq(idFieldName, id)
+                    FilterByIdTyped = Builders<object>.Filter.Eq(idFieldName, (TId)id)
                 };
 
                 originals.TryAdd(id, entitySerialized);
             }
         }
 
-        private object GetId<TEntity>(TEntity entity)
+        private TId GetId<TEntity, TId>(TEntity entity)
             where TEntity : class
         {
             // TODO: Id é o default, mas pode ser configurado outra propriedade para PK
-            return typeof(TEntity).GetProperty("Id").GetValue(entity, null);
+            return (TId)typeof(TEntity).GetProperty("Id").GetValue(entity, null);
         }
 
-        public TEntity Add<TEntity>(TEntity entity)
+        public TEntity Add<TEntity, TId>(TEntity entity)
             where TEntity : class
         {
             var collectionName = this.GetCollectionName<TEntity>();
 
-            var id = this.GetId(entity);
+            var id = this.GetId<TEntity, TId>(entity);
 
             var entities = this.GetCollectionFromContext(collectionName);
             var entitiesState = this.GetCollectionState(collectionName);
@@ -306,12 +306,14 @@ namespace MongoDB.EntityFramework.Core
             return entity;
         }
 
-        public TEntity Update<TEntity>(TEntity entity)
+        public TEntity Update<TEntity, TId>(TEntity entity)
             where TEntity : class
         {
+            //TODO: verificar se isso funciona sem antes fazer uma query, pois a entidade não vai estar no valor original, então talvez aqui seja interessante por
+
             var collectionName = this.GetCollectionName<TEntity>();
 
-            var id = this.GetId(entity);
+            var id = this.GetId<TEntity, TId>(entity);
 
             var entities = this.GetCollectionFromContext(collectionName);
             var entitiesState = this.GetCollectionState(collectionName);
@@ -328,14 +330,14 @@ namespace MongoDB.EntityFramework.Core
             return entity;
         }
 
-        public void Remove<TEntity>(TEntity entity)
+        public void Remove<TEntity, TId>(TEntity entity)
             where TEntity : class
         {
-            var id = this.GetId(entity);
-            this.Remove<TEntity>(id);
+            var id = this.GetId<TEntity, TId>(entity);
+            this.Remove<TEntity, TId>(id);
         }
 
-        public void Remove<TEntity>(object id)
+        public void Remove<TEntity, TId>(object id)
             where TEntity : class
         {
             var collectionName = this.GetCollectionName<TEntity>();

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Debug;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.EntityFramework.Samples.Entities;
 using Mongo = MongoDB.EntityFramework.Samples.Data.Mongo;
@@ -69,19 +70,19 @@ namespace MongoDB.EntityFramework.Labs
             var filterM = Builders<object>.Filter.Eq("_id", idM);
             Expression<Func<Box, bool>> filterM2 = x => x.Id == idM;
 
-            var collection = mongoClient.GetDatabase("store104").GetCollection<object>(typeof(Box).Name);
+            var collection = mongoClient.GetDatabase("store104").GetCollection<BsonDocument>(typeof(Box).Name);
             var collection2 = mongoClient.GetDatabase("store104").GetCollection<Box>(typeof(Box).Name);
 
             var result1 = await collection2.FindAsync(filterM2);
             var entity1 = result1.FirstOrDefault();
-            entity1.Measures = 10542;
+            entity1.Measures = 88;
 
-            var id1 = typeof(Box).GetProperty("Id").GetValue(entity1, null) as BoxId;
-            var filterM1 = Builders<object>.Filter.Eq("_id", id1);
+            var id1 = typeof(Box).GetProperty("Id").GetValue(entity1, null);
+            var filterM1 = Builders<BsonDocument>.Filter.Eq("_id", (BoxId)id1);
 
             var result = await collection.ReplaceOneAsync(
                                 filterM1,
-                                entity1,
+                                entity1.ToBsonDocument(),
                                 new ReplaceOptions { IsUpsert = false });
 
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
@@ -96,7 +97,7 @@ namespace MongoDB.EntityFramework.Labs
             Expression<Func<Box, bool>> filter = x => x.Id == id;
             var box = await mongoContext.Boxes.FirstOrDefaultAsync(filter);
             //var box = await mongoContext.Boxes.FindAsync(id);
-            box.Measures = 777;
+            box.Measures = 54185;
             //box.Numbers = new List<int>() { 1, 2, 3 };
 
             await mongoContext.SaveChangesAsync();

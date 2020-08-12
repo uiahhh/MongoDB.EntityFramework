@@ -9,7 +9,7 @@ namespace MongoDB.EntityFramework.Core
     //TODO: async methods
     //TODO: colocar cancellationtoken nos methodos async
 
-    public class DbSet<TEntity> : IDbSet<TEntity>
+    public class DbSet<TEntity, TId> : IDbSet<TEntity, TId>
            where TEntity : class
     {
         private readonly IDbContext context;
@@ -22,14 +22,14 @@ namespace MongoDB.EntityFramework.Core
             this.context = context;
         }
 
-        public async Task<TEntity> FindAsync<TId>(TId id)
+        public async Task<TEntity> FindAsync(TId id)
         {
             return await this.context.FindAsync<TEntity, TId>(id);
         }
 
         public async Task<List<TEntity>> ToListAsync()
         {
-            var result = await this.context.ToListAsync(this.predicate);
+            var result = await this.context.ToListAsync<TEntity, TId>(this.predicate);
 
             this.predicate = noFilter;
 
@@ -44,7 +44,7 @@ namespace MongoDB.EntityFramework.Core
         public async Task<TEntity> FirstOrDefaultAsync()
         {
             //TODO: executar teste em paralelo e ver se o predicate influencia em outra query
-            var result = await this.context.FirstOrDefaultAsync(this.predicate);
+            var result = await this.context.FirstOrDefaultAsync<TEntity, TId>(this.predicate);
 
             this.predicate = noFilter;
 
@@ -72,12 +72,12 @@ namespace MongoDB.EntityFramework.Core
 
         public void Add(TEntity entity)
         {
-            this.context.Add(entity);
+            this.context.Add<TEntity, TId>(entity);
         }
 
         public void Remove(TEntity entity)
         {
-            this.context.Remove(entity);
+            this.context.Remove<TEntity, TId>(entity);
         }
     }
 }

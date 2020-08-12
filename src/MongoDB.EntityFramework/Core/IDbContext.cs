@@ -8,23 +8,23 @@ namespace MongoDB.EntityFramework.Core
 {
     public interface IDbContext
     {
-        IDbSet<TEntity> Set<TEntity>() where TEntity : class;
+        IDbSet<TEntity, TId> Set<TEntity, TId>() where TEntity : class;
 
-        Task<List<TEntity>> AllAsync<TEntity>(CancellationToken cancellationToken = default) where TEntity : class;
+        Task<List<TEntity>> AllAsync<TEntity, TId>(CancellationToken cancellationToken = default) where TEntity : class;
 
-        Task<List<TEntity>> ToListAsync<TEntity>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
+        Task<List<TEntity>> ToListAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
 
-        Task<TEntity> FirstOrDefaultAsync<TEntity>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
+        Task<TEntity> FirstOrDefaultAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
 
         Task<TEntity> FindAsync<TEntity, TId>(TId id, CancellationToken cancellationToken = default) where TEntity : class;
 
-        TEntity Add<TEntity>(TEntity entity) where TEntity : class;
+        TEntity Add<TEntity, TId>(TEntity entity) where TEntity : class;
 
-        TEntity Update<TEntity>(TEntity entity) where TEntity : class;
+        TEntity Update<TEntity, TId>(TEntity entity) where TEntity : class;
 
-        void Remove<TEntity>(TEntity entity) where TEntity : class;
+        void Remove<TEntity, TId>(TEntity entity) where TEntity : class;
 
-        void Remove<TEntity>(object id) where TEntity : class;
+        void Remove<TEntity, TId>(object id) where TEntity : class;
 
         Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
