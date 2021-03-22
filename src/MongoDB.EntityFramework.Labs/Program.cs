@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
@@ -6,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Debug;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.EntityFramework.Samples.Entities;
 using Mongo = MongoDB.EntityFramework.Samples.Data.Mongo;
@@ -64,40 +64,41 @@ namespace MongoDB.EntityFramework.Labs
             //    sqliteContext.SaveChanges();
             //}
 
-            var mongoClient = serviceProvider.GetService<IMongoClient>();
-            var idM = new BoxId("123");
-            var boxM = new Box(idM, 10);
-            var filterM = Builders<object>.Filter.Eq("_id", idM);
-            Expression<Func<Box, bool>> filterM2 = x => x.Id == idM;
+            //var mongoClient = serviceProvider.GetService<IMongoClient>();
+            //var idM = new BoxId("123");
+            //var boxM = new Box(idM, 10);
+            //var filterM = Builders<object>.Filter.Eq("_id", idM);
+            //Expression<Func<Box, bool>> filterM2 = x => x.Id == idM;
 
-            var collection = mongoClient.GetDatabase("store104").GetCollection<BsonDocument>(typeof(Box).Name);
-            var collection2 = mongoClient.GetDatabase("store104").GetCollection<Box>(typeof(Box).Name);
+            //var collection = mongoClient.GetDatabase("store104").GetCollection<BsonDocument>(typeof(Box).Name);
+            //var collection2 = mongoClient.GetDatabase("store104").GetCollection<Box>(typeof(Box).Name);
 
-            var result1 = await collection2.FindAsync(filterM2);
-            var entity1 = result1.FirstOrDefault();
-            entity1.Measures = 88;
+            //var result1 = await collection2.FindAsync(filterM2);
+            //var entity1 = result1.FirstOrDefault();
+            //entity1.Measures = 99;
 
-            var id1 = typeof(Box).GetProperty("Id").GetValue(entity1, null);
-            var filterM1 = Builders<BsonDocument>.Filter.Eq("_id", (BoxId)id1);
+            //var id1 = typeof(Box).GetProperty("Id").GetValue(entity1, null);
+            //var filterM1 = Builders<BsonDocument>.Filter.Eq("_id", (BoxId)id1);
 
-            var result = await collection.ReplaceOneAsync(
-                                filterM1,
-                                entity1.ToBsonDocument(),
-                                new ReplaceOptions { IsUpsert = false });
+            //var result = await collection.ReplaceOneAsync(
+            //                    filterM1,
+            //                    entity1.ToBsonDocument(),
+            //                    new ReplaceOptions { IsUpsert = false });
 
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
 
-            //var id1 = new BoxId("456");
-            //var box1 = new Box(id1, 10);
-            //box1.Numbers = new List<int>() { 1, 2, 3 };
-            //mongoContext.Boxes.Add(box1);
+            var id1 = new BoxId("555");
+            var box1 = new Box(id1, 10);
+            box1.Numbers = new List<int>() { 1, 2, 3 };
+            box1.Configurations = new List<Configuration> { new Configuration { TenantId = new TenantId { Value = 10000 } } };
+            mongoContext.Boxes.Add(box1);
 
             var id = new BoxId("123");
-            //Expression<Func<Box, bool>> filter = x => x.Measures == 456;
-            Expression<Func<Box, bool>> filter = x => x.Id == id;
+            Expression<Func<Box, bool>> filter = x => x.Configurations.Any(n => n.TenantId == new TenantId { Value = 10000 });
+            //Expression<Func<Box, bool>> filter = x => x.Id == id;
             var box = await mongoContext.Boxes.FirstOrDefaultAsync(filter);
             //var box = await mongoContext.Boxes.FindAsync(id);
-            box.Measures = 54185;
+            //box.Measures = 234;
             //box.Numbers = new List<int>() { 1, 2, 3 };
 
             await mongoContext.SaveChangesAsync();

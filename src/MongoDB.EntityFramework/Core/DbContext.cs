@@ -15,8 +15,6 @@ namespace MongoDB.EntityFramework.Core
 {
     public class DbContext : IDbContext
     {
-        private readonly IMongoDatabase database;
-
         private readonly IDbContextOptions options;
 
         private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
@@ -36,11 +34,13 @@ namespace MongoDB.EntityFramework.Core
 
         public DbContext(IMongoClient client, string databaseName, IDbContextOptions options = null)
         {
-            this.database = client.GetDatabase(databaseName);
+            this.Database = client.GetDatabase(databaseName);
             this.options = options;
             this.InitCollectionsContext();
             this.InitOptions();
         }
+
+        protected IMongoDatabase Database { get; private set; }
 
         private void InitOptions()
         {
@@ -97,7 +97,7 @@ namespace MongoDB.EntityFramework.Core
         {
             var collectionName = this.GetCollectionName<TEntity>();
 
-            return this.database.GetCollection<TEntity>(collectionName);
+            return this.Database.GetCollection<TEntity>(collectionName);
         }
 
         public IDbSet<TEntity, TId> Set<TEntity, TId>()
@@ -116,6 +116,7 @@ namespace MongoDB.EntityFramework.Core
         public async Task<List<TEntity>> ToListAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
             where TEntity : class
         {
+            //TODO: colocar configureawait
             var result = await this.GetCollection<TEntity>().FindAsync(filter, cancellationToken: cancellationToken);
             var entities = result.ToList();
 
@@ -408,7 +409,7 @@ namespace MongoDB.EntityFramework.Core
 
                     if (originalValues.Any())
                     {
-                        var collectionDB = this.database.GetCollection<object>(collectionName);
+                        var collectionDB = this.Database.GetCollection<object>(collectionName);
 
                         foreach (var entity in entitiesToSave)
                         {
@@ -456,7 +457,7 @@ namespace MongoDB.EntityFramework.Core
                 if (entitiesState.Any())
                 {
                     var entitiesIdSaved = new List<object>();
-                    var collectionDB = this.database.GetCollection<object>(collectionName);
+                    var collectionDB = this.Database.GetCollection<object>(collectionName);
                     var entitiesFromContext = new Lazy<ConcurrentDictionary<object, object>>(() => this.GetCollectionFromContext(collectionName));
 
                     foreach (var entityState in entitiesState)

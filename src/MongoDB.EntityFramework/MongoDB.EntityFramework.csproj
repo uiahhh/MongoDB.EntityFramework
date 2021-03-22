@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Version>0.0.6</Version>
+    <Version>0.0.7</Version>
     <Authors>Ricardo Carvalho</Authors>
     <Company>ricardoac.com</Company>
     <Summary>Use MongoDB Driver as the Entity Framework.</Summary>

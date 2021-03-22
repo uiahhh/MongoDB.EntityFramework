@@ -17,6 +17,8 @@ namespace MongoDB.EntityFramework.Samples.Entities
 
         public List<int> Numbers { get; set; }
 
+        public List<Configuration> Configurations { get; set; }
+
         public override bool Equals(object obj)
         {
             return obj is Box box &&
@@ -27,6 +29,16 @@ namespace MongoDB.EntityFramework.Samples.Entities
         {
             return HashCode.Combine(Id);
         }
+    }
+
+    public class TenantId
+    {
+        public int Value { get; set; }
+    }
+
+    public class Configuration
+    {
+        public TenantId TenantId { get; set; }
     }
 
     public class BoxId
