@@ -87,6 +87,15 @@ namespace MongoDB.EntityFramework.Labs
 
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
 
+            
+            var o1 = new Order(Guid.NewGuid(), "fdg", 11);
+            mongoContext.Orders.Add(o1);
+            await mongoContext.SaveChangesAsync();
+            var o2 = new Order(Guid.NewGuid(), "fdg", 11);
+            mongoContext.Orders.Add(o2);
+            await mongoContext.SaveChangesAsync();
+
+
             var id1 = new BoxId("555");
             var box1 = new Box(id1, 10);
             box1.Numbers = new List<int>() { 1, 2, 3 };

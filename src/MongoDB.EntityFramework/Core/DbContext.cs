@@ -459,6 +459,7 @@ namespace MongoDB.EntityFramework.Core
                     var entitiesIdSaved = new List<object>();
                     var collectionDB = this.Database.GetCollection<object>(collectionName);
                     var entitiesFromContext = new Lazy<ConcurrentDictionary<object, object>>(() => this.GetCollectionFromContext(collectionName));
+                    var entitiesStateToUnmodified = new Lazy<ConcurrentDictionary<object, EntityState>>(() => this.GetCollectionState(collectionName));
 
                     foreach (var entityState in entitiesState)
                     {
@@ -484,6 +485,8 @@ namespace MongoDB.EntityFramework.Core
                             entitiesIdSaved.Add(id);
                             entitiesToRemove.Add(id);
                         }
+
+                        entitiesStateToUnmodified.Value[id] = EntityState.Unmodified;
                     }
 
                     if (entitiesToAdd.Any())

@@ -4,6 +4,7 @@
     //TODO: logs
     public enum EntityState
     {
+        Unmodified,
         Added,
         Updated,
         Removed,
