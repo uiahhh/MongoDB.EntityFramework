@@ -18,8 +18,14 @@ namespace MongoDB.EntityFramework.Core
         private static Expression<Func<TEntity, bool>> noFilter = _ => true;
 
         public DbSet(IDbContext context)
+            : this(context, typeof(TEntity).Name)
+        {            
+        }
+
+        public DbSet(IDbContext context, string collectionName)
         {
             this.context = context;
+            this.context.SetCollectionName<TEntity>(collectionName);
         }
 
         public async Task<TEntity> FindAsync(TId id)

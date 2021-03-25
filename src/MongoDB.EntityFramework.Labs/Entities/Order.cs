@@ -1,8 +1,25 @@
-﻿using System;
+﻿using AutoMapper;
+using MongoDB.Bson;
+using System;
 using System.Collections.Generic;
 
 namespace MongoDB.EntityFramework.Samples.Entities
 {
+    public class Mapper : Profile
+    {
+        public Mapper()
+        {
+            CreateMap<EntityGuid, EntityDTO>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(source => source.Id.ToString()));
+
+            CreateMap<EntityObjectId, EntityDTO>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(source => source.Id.ToString()));
+
+            CreateMap<Order, EntityDTO>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(source => source.Id.ToString()));
+        }
+    }
+
     public class Box
     {
         public Box(BoxId id, int measures)
@@ -62,9 +79,85 @@ namespace MongoDB.EntityFramework.Samples.Entities
         }
     }
 
+    public class EntityDTO
+    {
+        public string Id { get; set; }
+
+        public string StoreName { get; set; }
+
+        public decimal? TotalValue { get; set; }
+    }
+
+    public interface IEntity<TId>
+        where TId : IEquatable<TId>
+    {
+        TId Id { get; set; }
+
+        int ProjectId { get; set; }
+
+        string StoreName { get; set; }
+
+        decimal? TotalValue { get; set; }
+    }
+
+
+    public class EntityGuid : IEntity<Guid>
+    {
+        public EntityGuid()
+        {
+            Id = Guid.NewGuid();
+            StoreName = "some name 01";
+            TotalValue = 11.0M;
+            ProjectId = new Random().Next(1, 50);
+        }
+
+        public Guid Id { get; set; }
+
+        public int ProjectId { get; set; }
+
+        public string StoreName { get; set; }
+
+        public decimal? TotalValue { get; set; }
+    }
+
+    public class EntityObjectId : IEntity<ObjectId>
+    {
+        public EntityObjectId()
+        {
+            Id = ObjectId.GenerateNewId();
+            StoreName = "some name 02";
+            TotalValue = 12.0M;
+            ProjectId = new Random().Next(1, 50);
+        }
+
+        public ObjectId Id { get; set; }
+
+        public int ProjectId { get; set; }
+
+        public string StoreName { get; set; }
+
+        public decimal? TotalValue { get; set; }
+    }
+
     public class Order
     {
         public Order(Guid id, string storeName, decimal totalValue)
+        {
+            Id = id;
+            StoreName = storeName;
+            TotalValue = totalValue;
+        }
+
+        public Guid Id { get; set; }
+
+        public string StoreName { get; set; }
+
+        public decimal? TotalValue { get; set; }
+    }
+
+    public class OrderFlat
+    {
+        public OrderFlat(Guid id, string storeName, decimal totalValue)
         {
             Id = id;
             StoreName = storeName;

@@ -10,8 +10,6 @@ namespace MongoDB.EntityFramework.Core
     {
         IDbSet<TEntity, TId> Set<TEntity, TId>() where TEntity : class;
 
-        Task<List<TEntity>> AllAsync<TEntity, TId>(CancellationToken cancellationToken = default) where TEntity : class;
-
         Task<List<TEntity>> ToListAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
 
         Task<TEntity> FirstOrDefaultAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
@@ -27,6 +25,10 @@ namespace MongoDB.EntityFramework.Core
         void Remove<TEntity, TId>(object id) where TEntity : class;
 
         Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
+        void SetCollectionName<TEntity>(string collectionName) where TEntity : class;
+
+        void ClearContext();
 
         //create a bulk
         //db.collection.bulkWrite()

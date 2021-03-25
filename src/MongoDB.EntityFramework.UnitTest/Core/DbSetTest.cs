@@ -9,13 +9,13 @@ namespace MongoDB.EntityFramework.UnitTest.Core
     {
         private Fixture _fixture;
         private Mock<IDbContext> _contextMock;
-        private DbSet<EntityFake> _target;
+        private DbSet<EntityFake, int> _target;
 
         public DbSetTest()
         {
             _fixture = new Fixture();
             _contextMock = new Mock<IDbContext>();
-            _target = new DbSet<EntityFake>(_contextMock.Object);
+            _target = new DbSet<EntityFake, int>(_contextMock.Object);
         }
     }
 }

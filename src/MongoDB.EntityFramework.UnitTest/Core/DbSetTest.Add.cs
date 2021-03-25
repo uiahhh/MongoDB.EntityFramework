@@ -12,7 +12,7 @@ namespace MongoDB.EntityFramework.UnitTest.Core
             // Arrange
             var expected = _fixture.Create<EntityFake>();
             _contextMock
-                .Setup(x => x.Add<EntityFake>(expected))
+                .Setup(x => x.Add<EntityFake, int>(expected))
                 .Verifiable();
 
             // Act
@@ -28,7 +28,7 @@ namespace MongoDB.EntityFramework.UnitTest.Core
             // Arrange
             var expected = default(EntityFake);
             _contextMock
-                .Setup(x => x.Add<EntityFake>(expected))
+                .Setup(x => x.Add<EntityFake, int>(expected))
                 .Verifiable();
 
             // Act

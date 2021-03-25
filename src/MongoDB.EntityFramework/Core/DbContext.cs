@@ -28,6 +28,10 @@ namespace MongoDB.EntityFramework.Core
         //id,state
         private ConcurrentDictionary<string, ConcurrentDictionary<object, EntityState>> collectionsState;
 
+        //this instance shouldn't be clear
+        //entity type, collectioname
+        private Dictionary<Type, string> collectionsName = new Dictionary<Type, string>();
+
         private static bool globalConfigurationsInitialized = false;
 
         private static readonly object locker = new object();
@@ -70,7 +74,7 @@ namespace MongoDB.EntityFramework.Core
         {
             this.collectionsFromContext = new ConcurrentDictionary<string, ConcurrentDictionary<object, object>>();
             this.collectionsOriginal = new ConcurrentDictionary<string, ConcurrentDictionary<object, OriginalValue>>();
-            this.collectionsState = new ConcurrentDictionary<string, ConcurrentDictionary<object, EntityState>>();
+            this.collectionsState = new ConcurrentDictionary<string, ConcurrentDictionary<object, EntityState>>();            
         }
 
         private string GetIdFieldName<TEntity>()
@@ -83,13 +87,18 @@ namespace MongoDB.EntityFramework.Core
         {
             //TODO: id field/column name
             return "_id";
+        }        
+
+        public void SetCollectionName<TEntity>(string collectionName)
+            where TEntity : class
+        {
+            this.collectionsName[typeof(TEntity)] = collectionName;
         }
 
         protected string GetCollectionName<TEntity>()
             where TEntity : class
         {
-            // TODO: necessidade de ter algo configuravel, como no fluent do EF
-            return typeof(TEntity).Name;
+            return this.collectionsName[typeof(TEntity)];
         }
 
         protected IMongoCollection<TEntity> GetCollection<TEntity>()
@@ -377,6 +386,12 @@ namespace MongoDB.EntityFramework.Core
 
         //TODO: configurewait e async em tudo
         //TODO: change to ValueTask
+
+        //TODO: review this code
+        public void ClearContext()
+        {
+            InitCollectionsContext();
+        }
 
         public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
         {

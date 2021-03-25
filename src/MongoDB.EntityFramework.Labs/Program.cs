@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Debug;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.EntityFramework.Samples.Entities;
 using Mongo = MongoDB.EntityFramework.Samples.Data.Mongo;
@@ -14,6 +17,8 @@ using Sqlite = MongoDB.EntityFramework.Samples.Data.Sqlite;
 
 namespace MongoDB.EntityFramework.Labs
 {
+
+
     internal class Program
     {
         private static async Task Main(string[] args)
@@ -23,6 +28,7 @@ namespace MongoDB.EntityFramework.Labs
             Console.WriteLine("Sample Started");
 
             var serviceCollection = new ServiceCollection();
+            serviceCollection.AddAutoMapper(typeof(Program));
 
             //var loggerFactory = LoggerFactory.Create(builder =>
             //{
@@ -85,15 +91,31 @@ namespace MongoDB.EntityFramework.Labs
             //                    entity1.ToBsonDocument(),
             //                    new ReplaceOptions { IsUpsert = false });
 
+            await PerformanceTest(serviceProvider);           
+
+            return;
+
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
 
-            
-            var o1 = new Order(Guid.NewGuid(), "fdg", 11);
-            mongoContext.Orders.Add(o1);
-            await mongoContext.SaveChangesAsync();
-            var o2 = new Order(Guid.NewGuid(), "fdg", 11);
-            mongoContext.Orders.Add(o2);
-            await mongoContext.SaveChangesAsync();
+            var os = await mongoContext.Orders.ToListAsync();
+
+            for (int i = 0; i < 1; i++)
+            {
+                var o1 = new Order(Guid.NewGuid(), "fdg", 11);
+                mongoContext.Orders.Add(o1);
+
+                //var o2 = new Order(Guid.NewGuid(), "fdg", 11);
+                //mongoContext.OrdersBkp.Add(o2);
+
+                var o3 = new OrderFlat(Guid.NewGuid(), "fdg", 11);
+                mongoContext.OrdersFlat.Add(o3);
+
+                await mongoContext.SaveChangesAsync();
+            }
+
+            //var o2 = new Order(Guid.NewGuid(), "fdg", 11);
+            //mongoContext.Orders.Add(o2);
+            //await mongoContext.SaveChangesAsync();
 
 
             var id1 = new BoxId("555");
@@ -148,6 +170,246 @@ namespace MongoDB.EntityFramework.Labs
             //    var o2222 = await mongoContext.Orders.FindAsync(o22.Id);
             //    await mongoContext.SaveChangesAsync();
             //}
+        }
+
+        private static void SetupMongo(IServiceCollection services)
+        {
+            var connectionString = "mongodb://localhost:27017";
+            //var databaseName = "storePERFORMANCE_01";
+            var databaseName = "PERFORMANCE_03";
+            services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
+            services.AddTransient<Mongo.StoreContext>(); //transient for performance tests
+
+            services.AddSingleton<IMongoClient>(provider => new MongoClient(connectionString));
+        }
+
+        private static async Task PerformanceTest(ServiceProvider serviceProvider)
+        {
+            await PerformanceTest<EntityGuid, Guid, EntityObjectId, ObjectId>(serviceProvider, Guid.NewGuid(), ObjectId.GenerateNewId());
+            
+            Console.WriteLine("------------------------");
+            Console.WriteLine("------------------------");
+
+            await PerformanceTest<EntityObjectId, ObjectId, EntityGuid, Guid>(serviceProvider, ObjectId.GenerateNewId(), Guid.NewGuid());
+            
+            Console.WriteLine("FINISHED");
+            Console.ReadLine();
+        }
+
+        private static async Task PerformanceTest<TFirstEntity, TFirstId, TSecondEntity, TSecondId>(ServiceProvider serviceProvider, TFirstId byFirstId, TSecondId bySecondId)
+            where TFirstEntity : class, IEntity<TFirstId>, new()
+            where TFirstId : IEquatable<TFirstId>
+            where TSecondEntity : class, IEntity<TSecondId>, new()
+            where TSecondId : IEquatable<TSecondId>
+        {
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+            var mapper = serviceProvider.GetService<IMapper>();
+            var page = 7;
+            var pageSize = 50;
+
+            //warm
+            var model = new Order(Guid.NewGuid(), "df", 10);
+            mongoContext.Orders.Add(model);
+            await mongoContext.SaveChangesAsync();
+
+            //var amounts = new int[] { 1, 10, 100 };
+            //foreach (var amount in amounts)
+            //{
+            //    await PerformanceTest_Create<TFirstEntity, TFirstId>(serviceProvider, amount, inBatch: false);
+            //    await PerformanceTest_Create<TSecondEntity, TSecondId>(serviceProvider, amount, inBatch: false);
+
+            //    Console.WriteLine("------------------------");
+            //}
+
+            //amounts = new int[] { 1, 10, 100, 1000, 10_000, 50_000 };
+            //foreach (var amount in amounts)
+            //{
+            //    await PerformanceTest_Create<TFirstEntity, TFirstId>(serviceProvider, amount, inBatch: true);
+            //    await PerformanceTest_Create<TSecondEntity, TSecondId>(serviceProvider, amount, inBatch: true);
+
+            //    Console.WriteLine("------------------------");
+            //}
+
+            //TODO: analisar pq demora depois de inserir 1M de registros
+            //var amounts = new int[] { 1_000_000 };
+            ////var amounts = new int[] { 1_000 };
+            //foreach (var amount in amounts)
+            //{
+            //    await PerformanceTest_Create<TFirstEntity, TFirstId>(serviceProvider, amount, inBatch: true);
+            //    await PerformanceTest_Create<TSecondEntity, TSecondId>(serviceProvider, amount, inBatch: true);
+
+            //    Console.WriteLine("------------------------");
+            //}
+            //return;
+
+            //TODO: analisar pq demora o segundo select - fazer esse teste usando scoped ao inves de transient
+            //await PerformanceTest_ReadAll<TFirstEntity, TFirstId>(serviceProvider, mapper);
+            //await PerformanceTest_ReadAll<TSecondEntity, TSecondId>(serviceProvider, mapper);
+
+            //Console.WriteLine("------------------------");
+
+            await PerformanceTest_ReadAllPaged<TFirstEntity, TFirstId>(serviceProvider, mapper, page, pageSize);
+            await PerformanceTest_ReadAllPaged<TSecondEntity, TSecondId>(serviceProvider, mapper, page, pageSize);
+
+            Console.WriteLine("------------------------");
+
+            await PerformanceTest_ReadFiltered<TFirstEntity, TFirstId>(serviceProvider, mapper);
+            await PerformanceTest_ReadFiltered<TSecondEntity, TSecondId>(serviceProvider, mapper);
+
+            Console.WriteLine("------------------------");
+
+            await PerformanceTest_ReadFilteredById<TFirstEntity, TFirstId>(serviceProvider, mapper, byFirstId);
+            await PerformanceTest_ReadFilteredById<TSecondEntity, TSecondId>(serviceProvider, mapper, bySecondId);
+
+            Console.WriteLine("------------------------");
+
+            //var models = await mongoContext.Orders.ToListAsync();
+            //var count = models.Count();
+
+            ////var dto = mapper.Map<EntityDTO>(model);
+            //var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();            
+        }
+
+        private static async Task PerformanceTest_ReadAll<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            var models = await dbset.ToListAsync();
+            var amount = models.Count();
+            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = "Read All";
+            PerformanceTestResult<TEntity>(testName, amount, watch);
+        }
+
+        private static async Task PerformanceTest_ReadAllPaged<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper, int page, int pageSize)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            var models = await dbset.ToListAsync();
+            var amount = models.Count();
+            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = "Read All";
+            PerformanceTestResult<TEntity>(testName, amount, watch);
+        }
+
+        private static async Task PerformanceTest_ReadFiltered<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            var models = await dbset.Where(x => x.ProjectId == 33).ToListAsync();
+            var amount = models.Count();
+            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = "Read Filtered";
+            PerformanceTestResult<TEntity>(testName, amount, watch);
+        }
+
+        private static async Task PerformanceTest_ReadFilteredById<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper, TId id)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            var model = await dbset.FindAsync(id);
+            var dto = mapper.Map<EntityDTO>(model);
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = "Read By Id";
+            PerformanceTestResult<TEntity>(testName, model == null ? 0 : 1, watch);
+        }
+
+        private static async Task PerformanceTest_ReadPaged<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper, int page, int pageSize)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            var models = await dbset.ToListAsync();
+            var amount = models.Count();
+            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = "Read All";
+            PerformanceTestResult<TEntity>(testName, amount, watch);
+        }
+
+        private static async Task PerformanceTest_Create<TEntity, TId>(ServiceProvider serviceProvider, int amount, bool inBatch)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            for (int i = 0; i < amount; i++)
+            {
+                var model = new TEntity();
+                dbset.Add(model);
+
+                if (!inBatch) await mongoContext.SaveChangesAsync();
+            }
+
+            if (inBatch) await mongoContext.SaveChangesAsync();
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = inBatch ? "Create in Batch" : "Create";
+            PerformanceTestResult<TEntity>(testName, amount, watch);
+        }
+
+        private static void PerformanceTestResult<TEntity>(string testName, int amount, Stopwatch watch)
+        {
+            Console.WriteLine($"{testName} - amount: {amount} - time: {Convert.ToInt32(watch.Elapsed.TotalMilliseconds)}ms - {typeof(TEntity).Name}");            
         }
 
         private static async Task SecondTest(ServiceProvider serviceProvider)
@@ -245,14 +507,6 @@ namespace MongoDB.EntityFramework.Labs
         public static readonly LoggerFactory MyLoggerFactory
             = new LoggerFactory(new[] { new DebugLoggerProvider() });
 
-        private static void SetupMongo(IServiceCollection services)
-        {
-            var connectionString = "mongodb://localhost:27017";
-            var databaseName = "store104";
-            services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
-            services.AddScoped<Mongo.StoreContext>();
 
-            services.AddScoped<IMongoClient>(provider => new MongoClient(connectionString));
-        }
     }
 }

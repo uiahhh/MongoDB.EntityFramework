@@ -15,7 +15,7 @@ namespace MongoDB.EntityFramework.UnitTest.Core
             var id = _fixture.Create<int>();
             var expected = _fixture.Create<EntityFake>();
             _contextMock
-                .Setup(x => x.FindAsync<EntityFake>(id, default))
+                .Setup(x => x.FindAsync<EntityFake, int>(id, default))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
@@ -34,7 +34,7 @@ namespace MongoDB.EntityFramework.UnitTest.Core
             var id = _fixture.Create<int>();
             var expected = default(EntityFake);
             _contextMock
-                .Setup(x => x.FindAsync<EntityFake>(id, default))
+                .Setup(x => x.FindAsync<EntityFake, int>(id, default))
                 .ReturnsAsync(expected)
                 .Verifiable();
 
