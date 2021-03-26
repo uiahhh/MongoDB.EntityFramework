@@ -2,7 +2,7 @@
 
 namespace MongoDB.EntityFramework.Core
 {
-    public interface IDbSet<TEntity, TId> : IDocumentQueryable<TEntity>
+    public interface IDbSet<TEntity, TId> : IDocumentQueryable<TEntity>, IOrderedQueryable<TEntity>
             where TEntity : class
     {
         void Add(TEntity entity);

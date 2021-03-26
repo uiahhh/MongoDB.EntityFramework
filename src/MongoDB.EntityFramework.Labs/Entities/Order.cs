@@ -93,13 +93,58 @@ namespace MongoDB.EntityFramework.Samples.Entities
     {
         TId Id { get; set; }
 
-        int ProjectId { get; set; }
+        TId ProjectId { get; set; }
 
         string StoreName { get; set; }
 
         decimal? TotalValue { get; set; }
+
+        DateTime CreatedAt { get; set; }
     }
 
+    public static class Ids
+    {
+        private static int totalRegisters = 2_000_000 * 2;
+        private static int totalRegistersPerProject = 20_000;
+        private static int totalIds = totalRegisters / totalRegistersPerProject;
+
+        private static Guid[] guids;
+        private static ObjectId[] objectIds;
+
+        public static Guid GetGuid()
+        {
+            if (guids == null)
+            {
+                var ids = new List<Guid>();
+                for (int i = 0; i < totalIds; i++)
+                {
+                    ids.Add(Guid.NewGuid());
+                }
+
+                guids = ids.ToArray();
+            }
+
+            var index = new Random().Next(0, totalIds - 1);
+            return guids[index];
+        }
+
+        public static ObjectId GetObjectId()
+        {
+            if (objectIds == null)
+            {
+                var ids = new List<ObjectId>();
+                for (int i = 0; i < totalIds; i++)
+                {
+                    ids.Add(ObjectId.GenerateNewId());
+                }
+
+                objectIds = ids.ToArray();
+            }
+
+            var index = new Random().Next(0, totalIds - 1);
+            return objectIds[index];
+        }
+    }
 
     public class EntityGuid : IEntity<Guid>
     {
@@ -108,16 +153,26 @@ namespace MongoDB.EntityFramework.Samples.Entities
             Id = Guid.NewGuid();
             StoreName = "some name 01";
             TotalValue = 11.0M;
-            ProjectId = new Random().Next(1, 50);
+            ProjectId = Ids.GetGuid();
+            CreatedAt = RandomDay();
         }
 
         public Guid Id { get; set; }
 
-        public int ProjectId { get; set; }
+        public Guid ProjectId { get; set; }
 
         public string StoreName { get; set; }
 
         public decimal? TotalValue { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+
+        private DateTime RandomDay()
+        {
+            DateTime start = new DateTime(1995, 1, 1);
+            int range = (DateTime.Today - start).Days;
+            return start.AddDays(new Random().Next(range));
+        }
     }
 
     public class EntityObjectId : IEntity<ObjectId>
@@ -127,16 +182,26 @@ namespace MongoDB.EntityFramework.Samples.Entities
             Id = ObjectId.GenerateNewId();
             StoreName = "some name 02";
             TotalValue = 12.0M;
-            ProjectId = new Random().Next(1, 50);
+            ProjectId = Ids.GetObjectId();
+            CreatedAt = RandomDay();
         }
 
         public ObjectId Id { get; set; }
 
-        public int ProjectId { get; set; }
+        public ObjectId ProjectId { get; set; }
 
         public string StoreName { get; set; }
 
         public decimal? TotalValue { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+
+        private DateTime RandomDay()
+        {
+            DateTime start = new DateTime(1995, 1, 1);
+            int range = (DateTime.Today - start).Days;
+            return start.AddDays(new Random().Next(range));
+        }
     }
 
     public class Order

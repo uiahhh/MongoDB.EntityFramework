@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.EntityFramework.Core;
@@ -21,6 +22,8 @@ namespace MongoDB.EntityFramework.Samples.Data.Mongo
 
     public class StoreContext : DbContext
     {
+        private static bool indexesCreated;
+
         public StoreContext(IMongoClient client, MongoSettings settings)
             : base(client, settings.DatabaseName)
         {
@@ -33,6 +36,46 @@ namespace MongoDB.EntityFramework.Samples.Data.Mongo
             OrdersFlat = new DbSet<OrderFlat, Guid>(this, nameof(Order));
             Items = new DbSet<Item, ItemId>(this);
             Boxes = new DbSet<Box, BoxId>(this);
+
+            CreateIndexes();
+        }
+
+        private void CreateIndexes()
+        {
+            if (indexesCreated)
+            {
+                CreateDescendingIndex<EntityObjectId>(x => x.CreatedAt);
+                CreateDescendingIndex<EntityGuid>(x => x.CreatedAt);
+
+                CreateAscendingIndex<EntityObjectId>(x => x.ProjectId);
+                CreateAscendingIndex<EntityGuid>(x => x.ProjectId);
+
+                var collection = this.GetCollection<EntityObjectId>();
+                var indexKeysDefinition = Builders<EntityObjectId>.IndexKeys.Descending(x => x.CreatedAt);
+                collection.Indexes.CreateOne(new CreateIndexModel<EntityObjectId>(indexKeysDefinition));
+
+                var collection2 = this.GetCollection<EntityGuid>();
+                var indexKeysDefinition2 = Builders<EntityGuid>.IndexKeys.Descending(x => x.CreatedAt);
+                collection2.Indexes.CreateOne(new CreateIndexModel<EntityGuid>(indexKeysDefinition2));
+
+                indexesCreated = true;
+            }
+        }
+
+        private void CreateDescendingIndex<TEntity>(Expression<Func<TEntity, object>> field)
+            where TEntity : class
+        {
+            var collection = this.GetCollection<TEntity>();
+            var indexKeysDefinition = Builders<TEntity>.IndexKeys.Descending(field);
+            collection.Indexes.CreateOne(new CreateIndexModel<TEntity>(indexKeysDefinition));
+        }
+
+        private void CreateAscendingIndex<TEntity>(Expression<Func<TEntity, object>> field)
+            where TEntity : class
+        {
+            var collection = this.GetCollection<TEntity>();
+            var indexKeysDefinition = Builders<TEntity>.IndexKeys.Ascending(field);
+            collection.Indexes.CreateOne(new CreateIndexModel<TEntity>(indexKeysDefinition));
         }
 
         public DbSet<EntityObjectId, ObjectId> EntityObjectIds { get; set; }

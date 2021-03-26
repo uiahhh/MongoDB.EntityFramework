@@ -10,9 +10,20 @@ namespace MongoDB.EntityFramework.Core
     {
         IDbSet<TEntity, TId> Set<TEntity, TId>() where TEntity : class;
 
-        Task<List<TEntity>> ToListAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
+        Task<List<TEntity>> ToListAsync<TEntity, TId>(
+            Expression<Func<TEntity, bool>> filter, 
+            PagedOptions<TEntity> pagedOptions = null,
+            List<OrderDefinition<TEntity>> orderDefinitions = null,
+            int? skipCount = null,
+            int? limitCount = null,
+            bool asNoTracking = false,
+            CancellationToken cancellationToken = default) 
+            where TEntity : class;
 
-        Task<TEntity> FirstOrDefaultAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default) where TEntity : class;
+        Task<TEntity> FirstOrDefaultAsync<TEntity, TId>(
+            Expression<Func<TEntity, bool>> filter, 
+            CancellationToken cancellationToken = default) 
+            where TEntity : class;
 
         Task<TEntity> FindAsync<TEntity, TId>(TId id, CancellationToken cancellationToken = default) where TEntity : class;
 

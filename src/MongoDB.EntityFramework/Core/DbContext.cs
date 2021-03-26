@@ -116,26 +116,107 @@ namespace MongoDB.EntityFramework.Core
             return new DbSet<TEntity, TId>(this);
         }
 
-        public async Task<List<TEntity>> AllAsync<TEntity, TId>(CancellationToken cancellationToken = default)
-                    where TEntity : class
+        public async Task<List<TEntity>> ToListAsync<TEntity, TId>(
+            Expression<Func<TEntity, bool>> filter, 
+            PagedOptions<TEntity> pagedOptions = null,
+            List<OrderDefinition<TEntity>> orderDefinitions = null,
+            int? skipCount = null,
+            int? limitCount = null,
+            bool asNoTracking = false,
+            CancellationToken cancellationToken = default)
+            where TEntity : class
         {
-            return await this.ToListAsync<TEntity, TId>(null, cancellationToken);
+            var query = await BuildQuery(filter, pagedOptions, orderDefinitions, skipCount, limitCount);
+
+            var entities = await query.ToListAsync(cancellationToken);
+
+            if (asNoTracking)
+            {
+                return entities;
+            }
+            else
+            {
+                var entitiesFromContext = entities.Select(entity => this.GetEntityFromContext<TEntity, TId>(entity, cancellationToken));
+
+                return (await Task.WhenAll(entitiesFromContext)).ToList();
+            }
         }
 
-        public async Task<List<TEntity>> ToListAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
+        private async Task<IFindFluent<TEntity, TEntity>> BuildQuery<TEntity>(
+            Expression<Func<TEntity, bool>> filter, 
+            PagedOptions<TEntity> pagedOptions, 
+            List<OrderDefinition<TEntity>> orderDefinitions,
+            int? skipCount, 
+            int? limitCount) 
             where TEntity : class
         {
             //TODO: colocar configureawait
-            var result = await this.GetCollection<TEntity>().FindAsync(filter, cancellationToken: cancellationToken);
-            var entities = result.ToList();
 
-            // TODO: implementar o AsNoTracking
-            //Tracking(id, entity);
+            var query = this.GetCollection<TEntity>().Find(filter);
 
-            var entitiesFromContext = entities
-                .Select(entity => this.GetEntityFromContext<TEntity, TId>(entity, cancellationToken));
+            if (pagedOptions != null && pagedOptions.Mode != PagedMode.None)
+            {
+                query = await this.PagingQuery(query, pagedOptions);
+            }
+            else
+            {
+                if (skipCount.HasValue)
+                {
+                    query = query.Skip(skipCount.Value);
+                }
 
-            return (await Task.WhenAll(entitiesFromContext)).ToList();
+                if (limitCount.HasValue)
+                {
+                    query = query.Limit(limitCount.Value);
+                }
+            }
+
+            if (orderDefinitions != null && orderDefinitions.Any())
+            {
+                var firstOrder = orderDefinitions.First();
+                var queryOrdered = firstOrder.IsDescending ?
+                        query.SortByDescending(firstOrder.FieldSelector) :
+                        query.SortBy(firstOrder.FieldSelector);
+
+                foreach (var orderDefinition in orderDefinitions.Skip(1))
+                {
+                    queryOrdered = orderDefinition.IsDescending ?
+                        queryOrdered.ThenByDescending(orderDefinition.FieldSelector) :
+                        queryOrdered.ThenBy(orderDefinition.FieldSelector);
+                }
+
+                query = queryOrdered;
+            }
+
+            return query;
+        }
+
+        private async Task<IFindFluent<TEntity, TEntity>> PagingQuery<TEntity>(
+            IFindFluent<TEntity, TEntity> query, 
+            PagedOptions<TEntity> pagedOptions, 
+            CancellationToken cancellationToken = default) 
+            where TEntity : class
+        {
+            if (pagedOptions.ComputeTotal)
+            {
+                pagedOptions.Total = await query.CountDocumentsAsync(cancellationToken);
+            }
+
+            switch (pagedOptions.Mode)
+            {
+                case PagedMode.Classic:
+                    return query.Skip(pagedOptions.SkipCount).Limit(pagedOptions.LimitCount);
+                case PagedMode.ByRange:
+                    var filterBuilder = Builders<TEntity>.Filter;
+                    var filter = pagedOptions.GreaterThanFieldValue ? 
+                                    filterBuilder.Gt(pagedOptions.FieldName, pagedOptions.FieldValue) :
+                                    filterBuilder.Lt(pagedOptions.FieldName, pagedOptions.FieldValue);
+                    filter = filterBuilder.And(filter, query.Filter);
+                    return this.GetCollection<TEntity>().Find(filter).Limit(pagedOptions.LimitCount);
+                case PagedMode.None:
+                default:
+                    return query;
+            }            
         }
 
         public async Task<TEntity> FirstOrDefaultAsync<TEntity, TId>(Expression<Func<TEntity, bool>> filter, CancellationToken cancellationToken = default)
@@ -416,7 +497,17 @@ namespace MongoDB.EntityFramework.Core
                 var collectionName = collection.Key;
                 entitiesIdSavedByCollection.TryGetValue(collectionName, out var entitiesIdSaved);
 
-                var entitiesToSave = collection.Value.Where(x => entitiesIdSaved == null || !entitiesIdSaved.Contains(x.Key));
+                var entitiesToSave = Enumerable.Empty<KeyValuePair<object, object>>();
+
+                if (entitiesIdSaved != null)
+                {
+                    var hashSet = new HashSet<object>(entitiesIdSaved);
+                    entitiesToSave = collection.Value.Where(x => !hashSet.Contains(x.Key)).ToList();
+                }
+                else
+                {
+                    entitiesToSave = collection.Value.ToList();
+                }
 
                 if (entitiesToSave.Any())
                 {
