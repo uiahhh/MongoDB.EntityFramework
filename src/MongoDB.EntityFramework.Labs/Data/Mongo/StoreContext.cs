@@ -47,8 +47,10 @@ namespace MongoDB.EntityFramework.Samples.Data.Mongo
                 CreateDescendingIndex<EntityObjectId>(x => x.CreatedAt);
                 CreateDescendingIndex<EntityGuid>(x => x.CreatedAt);
 
-                CreateAscendingIndex<EntityObjectId>(x => x.ProjectId);
-                CreateAscendingIndex<EntityGuid>(x => x.ProjectId);
+                //CreateAscendingIndex<EntityObjectId>(x => x.ProjectId);
+                //CreateAscendingIndex<EntityGuid>(x => x.ProjectId);
+                CreateProjectIndex<EntityObjectId, ObjectId>();
+                CreateProjectIndex<EntityGuid, Guid>();
 
                 var collection = this.GetCollection<EntityObjectId>();
                 var indexKeysDefinition = Builders<EntityObjectId>.IndexKeys.Descending(x => x.CreatedAt);
@@ -60,6 +62,15 @@ namespace MongoDB.EntityFramework.Samples.Data.Mongo
 
                 indexesCreated = true;
             }
+        }
+
+        private void CreateProjectIndex<TEntity, TId>()
+            where TEntity : class, IEntity<TId>
+            where TId : IEquatable<TId>
+        {
+            var builder = Builders<TEntity>.IndexKeys;
+            var index = builder.Hashed(x => x.ProjectId);
+            CreateIndex(index);
         }
 
         private void CreateDescendingIndex<TEntity>(Expression<Func<TEntity, object>> field)
@@ -76,6 +87,14 @@ namespace MongoDB.EntityFramework.Samples.Data.Mongo
             var collection = this.GetCollection<TEntity>();
             var indexKeysDefinition = Builders<TEntity>.IndexKeys.Ascending(field);
             collection.Indexes.CreateOne(new CreateIndexModel<TEntity>(indexKeysDefinition));
+        }
+
+        private void CreateIndex<TEntity>(IndexKeysDefinition<TEntity> index)
+            where TEntity : class
+        {
+            var collection = this.GetCollection<TEntity>();
+            var indexModel = new CreateIndexModel<TEntity>(index);
+            collection.Indexes.CreateOne(indexModel);
         }
 
         public DbSet<EntityObjectId, ObjectId> EntityObjectIds { get; set; }

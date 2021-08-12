@@ -110,6 +110,7 @@ namespace MongoDB.EntityFramework.Samples.Entities
 
         private static Guid[] guids;
         private static ObjectId[] objectIds;
+        private static int[] ints;
 
         public static Guid GetGuid()
         {
@@ -143,6 +144,23 @@ namespace MongoDB.EntityFramework.Samples.Entities
 
             var index = new Random().Next(0, totalIds - 1);
             return objectIds[index];
+        }
+
+        public static int GetInt()
+        {
+            if (ints == null)
+            {
+                var ids = new List<int>();
+                for (int i = 0; i < totalIds; i++)
+                {
+                    ids.Add(i+1);
+                }
+
+                ints = ids.ToArray();
+            }
+
+            var index = new Random().Next(0, totalIds - 1);
+            return ints[index];
         }
     }
 

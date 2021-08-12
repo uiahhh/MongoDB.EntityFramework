@@ -44,6 +44,14 @@ namespace MongoDB.EntityFramework.Core
             this.InitOptions();
         }
 
+        public DbContext(IMongoDatabase database, IDbContextOptions options = null)
+        {
+            this.Database = database;
+            this.options = options;
+            this.InitCollectionsContext();
+            this.InitOptions();
+        }
+
         protected IMongoDatabase Database { get; private set; }
 
         private void InitOptions()

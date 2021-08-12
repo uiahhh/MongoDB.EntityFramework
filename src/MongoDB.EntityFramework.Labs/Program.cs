@@ -176,7 +176,7 @@ namespace MongoDB.EntityFramework.Labs
         private static void SetupMongo(IServiceCollection services)
         {
             var connectionString = "mongodb://localhost:27017";
-            var databaseName = "PERFORMANCE_09";
+            var databaseName = "PERFORMANCE_16";
             services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
             services.AddTransient<Mongo.StoreContext>(); //transient for performance tests
 
@@ -434,7 +434,7 @@ namespace MongoDB.EntityFramework.Labs
 
             var dbset = mongoContext.Set<TEntity, TId>();
 
-            object id = null;
+            object id = Ids.GetInt(); ;
             if (typeof(TId) == typeof(Guid))
             {
                 id = Ids.GetGuid();
