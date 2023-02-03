@@ -520,6 +520,8 @@ namespace MongoDB.EntityFramework.Core
             var entitiesIdSavedByCollection = await AddAndRemoveChanges(cancellationToken);
 
             await UpdateChanges(entitiesIdSavedByCollection, cancellationToken);
+
+            this.InitCollectionsContext();
         }
 
         //TODO: diminuir complexidade ciclomatica
