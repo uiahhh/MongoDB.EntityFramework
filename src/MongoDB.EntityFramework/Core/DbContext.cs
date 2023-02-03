@@ -19,6 +19,7 @@ namespace MongoDB.EntityFramework.Core
 
         private static SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
+        //TODO: move colections to ChangeTracker class
         //id,entity
         private ConcurrentDictionary<string, ConcurrentDictionary<object, object>> collectionsFromContext;
 
@@ -473,6 +474,32 @@ namespace MongoDB.EntityFramework.Core
             return this.GetDictionaryByCollectionName(collectionName, this.collectionsState);
         }
 
+        public ChangeTracker ChangeTracker()
+        {
+            return new ChangeTracker(this);
+        }
+
+        //TODO: move this method to ChangeTracker class
+        internal IEnumerable<EntityEntry<TEntity>> Entries<TEntity>()
+            where TEntity : class
+        {
+            var result = new List<EntityEntry<TEntity>>();
+
+            foreach (var collection in this.collectionsFromContext)
+            {
+                foreach (var item in collection.Value)
+                {
+                    if (item.Value is TEntity entity)
+                    {
+                        var entry = new EntityEntry<TEntity>(entity);
+                        result.Add(entry);
+                    }
+                }
+            }
+
+            return result;
+        }
+
         //TODO: configurewait e async em tudo
         //TODO: change to ValueTask
 
@@ -482,7 +509,7 @@ namespace MongoDB.EntityFramework.Core
             InitCollectionsContext();
         }
 
-        public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        public virtual async Task SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             //TODO: incluir uma transaction
             //https://docs.mongodb.com/manual/core/transactions/

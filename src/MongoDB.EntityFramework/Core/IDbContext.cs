@@ -41,6 +41,8 @@ namespace MongoDB.EntityFramework.Core
 
         void ClearContext();
 
+        ChangeTracker ChangeTracker();
+
         //create a bulk
         //db.collection.bulkWrite()
     }

@@ -222,7 +222,12 @@ namespace MongoDB.EntityFramework.Samples.Entities
         }
     }
 
-    public class Order
+    public interface IOrder
+    {
+        bool IsFlat { get; }
+    }
+
+    public class Order : IOrder
     {
         public Order(Guid id, string storeName, decimal totalValue)
         {
@@ -236,9 +241,11 @@ namespace MongoDB.EntityFramework.Samples.Entities
         public string StoreName { get; set; }
 
         public decimal? TotalValue { get; set; }
+
+        public bool IsFlat => false;
     }
 
-    public class OrderFlat
+    public class OrderFlat : IOrder
     {
         public OrderFlat(Guid id, string storeName, decimal totalValue)
         {
@@ -252,6 +259,8 @@ namespace MongoDB.EntityFramework.Samples.Entities
         public string StoreName { get; set; }
 
         public decimal? TotalValue { get; set; }
+
+        public bool IsFlat => true;
     }
 
     public struct ItemId

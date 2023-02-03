@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -18,39 +19,10 @@ using Sqlite = MongoDB.EntityFramework.Samples.Data.Sqlite;
 
 namespace MongoDB.EntityFramework.Labs
 {
-
-
     internal class Program
     {
-        private static async Task Main(string[] args)
-        {
-            await Task.Delay(1);
-
-            Console.WriteLine("Sample Started");
-
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddAutoMapper(typeof(Program));
-
-            //var loggerFactory = LoggerFactory.Create(builder =>
-            //{
-            //    builder
-            //        .AddFilter("Microsoft", LogLevel.Warning)
-            //        .AddFilter("System", LogLevel.Warning)
-            //        .AddFilter("LoggingConsoleApp.Program", LogLevel.Debug);
-            //});
-            //ILogger logger = loggerFactory.CreateLogger<Program>();
-            //logger.LogInformation("Example log message");
-
-            //TODO: user extension method
-            SetupSqlite(serviceCollection);
-            SetupMongo(serviceCollection);
-
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-
-            await FirstTest(serviceProvider);
-
-            //await SecondTest(serviceProvider);
-        }
+        public static readonly LoggerFactory MyLoggerFactory
+            = new LoggerFactory(new[] { new DebugLoggerProvider() });
 
         private static async Task FirstTest(ServiceProvider serviceProvider)
         {
@@ -92,23 +64,36 @@ namespace MongoDB.EntityFramework.Labs
             //                    entity1.ToBsonDocument(),
             //                    new ReplaceOptions { IsUpsert = false });
 
-            await PerformanceTest(serviceProvider);           
+            //await PerformanceTest(serviceProvider);
 
-            return;
+            //return;
 
             var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
 
+            var addAndEditOrder = new Order(Guid.NewGuid(), "yah", 10);
+            mongoContext.Set<Order, Guid>().Add(addAndEditOrder);
+            await mongoContext.SaveChangesAsync();
+
+            var addAndEditOrderClone = await mongoContext.Set<Order, Guid>().FindAsync(addAndEditOrder.Id);
+            //var addAndEditOrderClone = await mongoContext.Set<Order, Guid>().FindAsync(new Guid("480cf82a-14a2-4de2-9d2f-52f02913d842"));
+            addAndEditOrderClone.TotalValue = 12;
+            await mongoContext.SaveChangesAsync();
+
+            return;
+
             var os = await mongoContext.Orders.ToListAsync();
+            var id1 = Guid.NewGuid();
+            var id3 = Guid.NewGuid();
 
             for (int i = 0; i < 1; i++)
             {
-                var o1 = new Order(Guid.NewGuid(), "fdg", 11);
+                var o1 = new Order(id1, "fdg", 11);
                 mongoContext.Orders.Add(o1);
 
                 //var o2 = new Order(Guid.NewGuid(), "fdg", 11);
                 //mongoContext.OrdersBkp.Add(o2);
 
-                var o3 = new OrderFlat(Guid.NewGuid(), "fdg", 11);
+                var o3 = new OrderFlat(id3, "fdg", 11);
                 mongoContext.OrdersFlat.Add(o3);
 
                 await mongoContext.SaveChangesAsync();
@@ -118,14 +103,12 @@ namespace MongoDB.EntityFramework.Labs
             //mongoContext.Orders.Add(o2);
             //await mongoContext.SaveChangesAsync();
 
-
-            var id1 = new BoxId("555");
-            var box1 = new Box(id1, 10);
+            var id = new BoxId("555");
+            var box1 = new Box(id, 10);
             box1.Numbers = new List<int>() { 1, 2, 3 };
             box1.Configurations = new List<Configuration> { new Configuration { TenantId = new TenantId { Value = 10000 } } };
             mongoContext.Boxes.Add(box1);
 
-            var id = new BoxId("123");
             Expression<Func<Box, bool>> filter = x => x.Configurations.Any(n => n.TenantId == new TenantId { Value = 10000 });
             //Expression<Func<Box, bool>> filter = x => x.Id == id;
             var box = await mongoContext.Boxes.FirstOrDefaultAsync(filter);
@@ -134,6 +117,16 @@ namespace MongoDB.EntityFramework.Labs
             //box.Numbers = new List<int>() { 1, 2, 3 };
 
             await mongoContext.SaveChangesAsync();
+
+            var o30 = await mongoContext.OrdersFlat.FindAsync(id3);
+            o30.StoreName = "dfdfdfdfdf";
+
+            var o10 = await mongoContext.Orders.FindAsync(id1);
+            mongoContext.Orders.Remove(o10);
+
+            await mongoContext.SaveChangesAsync();
+
+            var ordersss = mongoContext.ChangeTracker().Entries<IOrder>().Where(x => !x.Entity.IsFlat);
 
             var x = 1;
 
@@ -173,25 +166,45 @@ namespace MongoDB.EntityFramework.Labs
             //}
         }
 
-        private static void SetupMongo(IServiceCollection services)
+        private static async Task Main(string[] args)
         {
-            var connectionString = "mongodb://localhost:27017";
-            var databaseName = "PERFORMANCE_16";
-            services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
-            services.AddTransient<Mongo.StoreContext>(); //transient for performance tests
+            await Task.Delay(1);
 
-            services.AddSingleton<IMongoClient>(provider => new MongoClient(connectionString));
+            Console.WriteLine("Sample Started");
+
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddAutoMapper(typeof(Program));
+
+            //var loggerFactory = LoggerFactory.Create(builder =>
+            //{
+            //    builder
+            //        .AddFilter("Microsoft", LogLevel.Warning)
+            //        .AddFilter("System", LogLevel.Warning)
+            //        .AddFilter("LoggingConsoleApp.Program", LogLevel.Debug);
+            //});
+            //ILogger logger = loggerFactory.CreateLogger<Program>();
+            //logger.LogInformation("Example log message");
+
+            //TODO: user extension method
+            SetupSqlite(serviceCollection);
+            SetupMongo(serviceCollection);
+
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            await FirstTest(serviceProvider);
+
+            //await SecondTest(serviceProvider);
         }
 
         private static async Task PerformanceTest(ServiceProvider serviceProvider)
         {
             await PerformanceTest<EntityGuid, Guid, EntityObjectId, ObjectId>(serviceProvider, Guid.NewGuid(), ObjectId.GenerateNewId());
-            
+
             Console.WriteLine("------------------------");
             Console.WriteLine("------------------------");
 
             await PerformanceTest<EntityObjectId, ObjectId, EntityGuid, Guid>(serviceProvider, ObjectId.GenerateNewId(), Guid.NewGuid());
-            
+
             Console.WriteLine("FINISHED");
             Console.ReadLine();
         }
@@ -291,6 +304,34 @@ namespace MongoDB.EntityFramework.Labs
             //Console.WriteLine("------------------------");
         }
 
+        private static async Task PerformanceTest_Create<TEntity, TId>(ServiceProvider serviceProvider, int amount, bool inBatch)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            for (int i = 0; i < amount; i++)
+            {
+                var model = new TEntity();
+                dbset.Add(model);
+
+                if (!inBatch) await mongoContext.SaveChangesAsync();
+            }
+
+            if (inBatch) await mongoContext.SaveChangesAsync();
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = inBatch ? "Create in Batch" : "Create";
+            PerformanceTestResult<TEntity>(testName, amount, watch);
+        }
+
         private static async Task PerformanceTest_ReadAll<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper)
             where TEntity : class, IEntity<TId>, new()
             where TId : IEquatable<TId>
@@ -381,48 +422,6 @@ namespace MongoDB.EntityFramework.Labs
             PerformanceTestResult<TEntity>(testName, amount, watch);
         }
 
-        private static async Task PerformanceTest_ReadSorted<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper, int amount)
-            where TEntity : class, IEntity<TId>, new()
-            where TId : IEquatable<TId>
-        {
-            var watch = new Stopwatch();
-            watch.Start();
-
-            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
-
-            var dbset = mongoContext.Set<TEntity, TId>();
-
-            var models = await dbset.Skip(amount).Take(amount).OrderByDescending(x => x.CreatedAt).ThenBy(x => x.ProjectId).ToListAsync();
-            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
-
-            mongoContext.ClearContext();
-
-            watch.Stop();
-            var testName = "Read 20k Sorted";
-            PerformanceTestResult<TEntity>(testName, amount, watch);
-        }
-
-        private static async Task PerformanceTest_ReadSortedAsNoTracking<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper, int amount)
-            where TEntity : class, IEntity<TId>, new()
-            where TId : IEquatable<TId>
-        {
-            var watch = new Stopwatch();
-            watch.Start();
-
-            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
-
-            var dbset = mongoContext.Set<TEntity, TId>();
-
-            var models = await dbset.AsNoTracking().Skip(amount).Take(amount).OrderByDescending(x => x.CreatedAt).ThenBy(x => x.ProjectId).ToListAsync();
-            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
-
-            mongoContext.ClearContext();
-
-            watch.Stop();
-            var testName = "Read 20k Sorted AsNoTracking";
-            PerformanceTestResult<TEntity>(testName, amount, watch);
-        }
-
         private static async Task PerformanceTest_ReadFiltered<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper)
             where TEntity : class, IEntity<TId>, new()
             where TId : IEquatable<TId>
@@ -476,7 +475,7 @@ namespace MongoDB.EntityFramework.Labs
             PerformanceTestResult<TEntity>(testName, model == null ? 0 : 1, watch);
         }
 
-        private static async Task PerformanceTest_Create<TEntity, TId>(ServiceProvider serviceProvider, int amount, bool inBatch)
+        private static async Task PerformanceTest_ReadSorted<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper, int amount)
             where TEntity : class, IEntity<TId>, new()
             where TId : IEquatable<TId>
         {
@@ -487,26 +486,40 @@ namespace MongoDB.EntityFramework.Labs
 
             var dbset = mongoContext.Set<TEntity, TId>();
 
-            for (int i = 0; i < amount; i++)
-            {
-                var model = new TEntity();
-                dbset.Add(model);
-
-                if (!inBatch) await mongoContext.SaveChangesAsync();
-            }
-
-            if (inBatch) await mongoContext.SaveChangesAsync();
+            var models = await dbset.Skip(amount).Take(amount).OrderByDescending(x => x.CreatedAt).ThenBy(x => x.ProjectId).ToListAsync();
+            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
 
             mongoContext.ClearContext();
 
             watch.Stop();
-            var testName = inBatch ? "Create in Batch" : "Create";
+            var testName = "Read 20k Sorted";
+            PerformanceTestResult<TEntity>(testName, amount, watch);
+        }
+
+        private static async Task PerformanceTest_ReadSortedAsNoTracking<TEntity, TId>(ServiceProvider serviceProvider, IMapper mapper, int amount)
+            where TEntity : class, IEntity<TId>, new()
+            where TId : IEquatable<TId>
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+
+            var mongoContext = serviceProvider.GetService<Mongo.StoreContext>();
+
+            var dbset = mongoContext.Set<TEntity, TId>();
+
+            var models = await dbset.AsNoTracking().Skip(amount).Take(amount).OrderByDescending(x => x.CreatedAt).ThenBy(x => x.ProjectId).ToListAsync();
+            var dtos = models.Select(x => mapper.Map<EntityDTO>(x)).ToList();
+
+            mongoContext.ClearContext();
+
+            watch.Stop();
+            var testName = "Read 20k Sorted AsNoTracking";
             PerformanceTestResult<TEntity>(testName, amount, watch);
         }
 
         private static void PerformanceTestResult<TEntity>(string testName, int amount, Stopwatch watch)
         {
-            Console.WriteLine($"{testName} - amount: {amount} - time: {Convert.ToInt32(watch.Elapsed.TotalMilliseconds)}ms - {typeof(TEntity).Name}");            
+            Console.WriteLine($"{testName} - amount: {amount} - time: {Convert.ToInt32(watch.Elapsed.TotalMilliseconds)}ms - {typeof(TEntity).Name}");
         }
 
         private static async Task SecondTest(ServiceProvider serviceProvider)
@@ -575,6 +588,16 @@ namespace MongoDB.EntityFramework.Labs
             //}
         }
 
+        private static void SetupMongo(IServiceCollection services)
+        {
+            var connectionString = "mongodb://localhost:27017";
+            var databaseName = "PERFORMANCE_19";
+            services.AddSingleton(new Mongo.MongoSettings(connectionString, databaseName));
+            services.AddTransient<Mongo.StoreContext>(); //transient for performance tests
+
+            services.AddSingleton<IMongoClient>(provider => new MongoClient(connectionString));
+        }
+
         private static void SetupSqlite(IServiceCollection services)
         {
             var connection = "Data Source=Store.db";
@@ -600,10 +623,5 @@ namespace MongoDB.EntityFramework.Labs
         //    .AddDebug()
         //    .AddConsole();
         //});
-
-        public static readonly LoggerFactory MyLoggerFactory
-            = new LoggerFactory(new[] { new DebugLoggerProvider() });
-
-
     }
 }
